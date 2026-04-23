@@ -1,0 +1,183 @@
+@HostAddress = http://localhost:5067
+
+### 1. Criar um Curso de Exemplo
+POST {{HostAddress}}/api/cursos
+Content-Type: application/json
+
+{
+  "nome": "Tecnologia da Informação e Comunicação"
+}
+
+### 2. Criar Disciplinas de Teste (vinculadas ao Curso id=1)
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Introdução à Programação",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Estrutura de Dados",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Banco de Dados",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Engenharia de Software",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Redes de Computadores",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Cálculo I",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Física I",
+  "cursoId": 1
+}
+
+###
+POST {{HostAddress}}/api/disciplinas
+Content-Type: application/json
+
+{
+  "nome": "Sistemas Operacionais",
+  "cursoId": 1
+}
+
+### 3. Criar um Usuário Moderador
+# Nota: TipoUsuario.Moderador = 2
+POST {{HostAddress}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Moderador Admin",
+  "email": "moderador@ufsc.br",
+  "senhaLimpa": "senhaForte123",
+  "tipo": 2
+}
+
+### 4. Criar um Usuário Padrão (Aluno)
+# Nota: TipoUsuario.Aluno = 1. Como é aluno, ele precisa do CursoId
+POST {{HostAddress}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nome": "João Estudante",
+  "email": "joao.estudante@grad.ufsc.br",
+  "senhaLimpa": "123456",
+  "cursoId": 1,
+  "tipo": 1
+}
+
+### 5. Criar um Usuário Administrador
+# Nota: TipoUsuario.Administrador = 3
+POST {{HostAddress}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Administrador Geral",
+  "email": "admin@ufsc.br",
+  "senhaLimpa": "admin123",
+  "tipo": 3
+}
+
+### 6. Login do Moderador
+POST {{HostAddress}}/api/usuarios/login
+Content-Type: application/json
+
+{
+  "email": "moderador@ufsc.br",
+  "senha": "senhaForte123"
+}
+
+### 7. Login do Aluno
+POST {{HostAddress}}/api/usuarios/login
+Content-Type: application/json
+
+{
+  "email": "joao.estudante@grad.ufsc.br",
+  "senha": "123456"
+}
+
+### 8. Login do Administrador
+POST {{HostAddress}}/api/usuarios/login
+Content-Type: application/json
+
+{
+  "email": "admin@ufsc.br",
+  "senha": "admin123"
+}
+
+### 9. Criar uma Atividade (Oferta sem disciplina — fica Pendente)
+POST {{HostAddress}}/api/atividades
+Content-Type: application/json
+
+{
+  "titulo": "Monitoria em Python",
+  "descricao": "Ensino de laços de repetição, lógica e algoritmos em Python 3.",
+  "custoHoras": 2,
+  "ofertanteId": 2
+}
+
+### 10. Criar uma Atividade Curricular (com disciplina — fica Aprovada)
+POST {{HostAddress}}/api/atividades
+Content-Type: application/json
+
+{
+  "titulo": "Grupo de Estudo - Estrutura de Dados",
+  "descricao": "Revisão de árvores binárias, pilhas e filas para a prova final.",
+  "custoHoras": 1,
+  "ofertanteId": 2,
+  "disciplinaId": 2
+}
+
+### 11. Listar Atividades com Filtros
+GET {{HostAddress}}/api/atividades?cursoId=1
+
+### 12. Listar Atividades que o usuário pode comprar (custo máximo = saldo)
+GET {{HostAddress}}/api/atividades?custoMaximo=2
+
+### 13. Listar Disciplinas
+GET {{HostAddress}}/api/disciplinas
+
+### 14. Listar Cursos
+GET {{HostAddress}}/api/cursos
+
+### 15. Listar Usuários
+GET {{HostAddress}}/api/usuarios

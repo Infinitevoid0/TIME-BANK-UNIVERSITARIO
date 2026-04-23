@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "uZFhBlXcUxldQMRQSAT4PGcvmepI3mXZ14vY0LPm86c=",
+  "Source": "BancoTempo.Api",
+  "BasePath": "_content/BancoTempo.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "BancoTempo.Api/wwwroot",
+      "Source": "BancoTempo.Api",
+      "ContentRoot": "/home/gerhardtth/Documentos/timebank/dozerotimebank/BancoTempo.Api/wwwroot/",
+      "BasePath": "_content/BancoTempo.Api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}
