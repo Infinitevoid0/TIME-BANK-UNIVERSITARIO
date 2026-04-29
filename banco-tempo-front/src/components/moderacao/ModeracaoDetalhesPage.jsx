@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade } from '../../services/atividadeService';
+import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
-import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle } from 'lucide-react';
+import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle, Edit2 } from 'lucide-react';
+import Modal from '../ui/Modal';
 
 const ModeracaoDetalhesPage = () => {
     const { id } = useParams();
@@ -11,6 +12,8 @@ const ModeracaoDetalhesPage = () => {
     const [anexos, setAnexos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [showCorrecaoModal, setShowCorrecaoModal] = useState(false);
+    const [feedbackTexto, setFeedbackTexto] = useState('');
     const toast = useToast();
 
     useEffect(() => {
@@ -61,6 +64,27 @@ const ModeracaoDetalhesPage = () => {
         }
     };
 
+    const handleSolicitarCorrecao = async () => {
+        if (!feedbackTexto.trim()) {
+            toast.error("O feedback não pode estar vazio.");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            await solicitarCorrecao(atividade.id, feedbackTexto);
+            toast.success("Correção solicitada com sucesso. O aluno foi notificado.");
+            navigate('/moderacao');
+        } catch (error) {
+            const errData3 = error.response?.data;
+            const msg3 = typeof errData3 === 'string' ? errData3 : (errData3?.mensagem || errData3?.title || 'Erro ao solicitar correção.');
+            toast.error(msg3);
+        } finally {
+            setActionLoading(false);
+            setShowCorrecaoModal(false);
+        }
+    };
+
     if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
     if (!atividade) return <div className="text-center mt-20 text-gray-500">Atividade não encontrada.</div>;
 
@@ -75,9 +99,18 @@ const ModeracaoDetalhesPage = () => {
                 <div className="p-6 border-b border-gray-100">
                     <div className="flex items-start justify-between">
                         <h1 className="text-2xl font-bold text-gray-900">{atividade.titulo}</h1>
-                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                            Pendente
-                        </span>
+                        <div className="flex gap-2">
+                            {atividade.status === 1 && (
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                    Pendente
+                                </span>
+                            )}
+                            {atividade.status === 7 && (
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                    Retorno de Correção
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
                         <div className="flex items-center">
@@ -145,8 +178,18 @@ const ModeracaoDetalhesPage = () => {
                         className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
                     >
                         <XCircle className="w-4 h-4 mr-2" />
-                        Reprovar
+                        Reprovar Totalmente
                     </button>
+                    {atividade.status === 1 && (
+                        <button
+                            onClick={() => setShowCorrecaoModal(true)}
+                            disabled={actionLoading}
+                            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
+                        >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Solicitar Correção
+                        </button>
+                    )}
                     <button
                         onClick={handleAprovar}
                         disabled={actionLoading}
@@ -157,6 +200,48 @@ const ModeracaoDetalhesPage = () => {
                     </button>
                 </div>
             </div>
+
+            {showCorrecaoModal && (
+                <Modal
+                    isOpen={showCorrecaoModal}
+                    onClose={() => setShowCorrecaoModal(false)}
+                    title="Solicitar Correção"
+                >
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                            Informe ao aluno o que ele precisa corrigir na atividade antes de ser aprovada.
+                        </p>
+                        <div>
+                            <textarea
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                rows="5"
+                                placeholder="Digite o feedback detalhado..."
+                                value={feedbackTexto}
+                                onChange={(e) => setFeedbackTexto(e.target.value)}
+                                maxLength={1000}
+                            />
+                            <div className="text-right text-xs text-gray-400 mt-1">
+                                {feedbackTexto.length}/1000
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                onClick={() => setShowCorrecaoModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSolicitarCorrecao}
+                                disabled={actionLoading || !feedbackTexto.trim()}
+                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70"
+                            >
+                                {actionLoading ? 'Enviando...' : 'Enviar Solicitação'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

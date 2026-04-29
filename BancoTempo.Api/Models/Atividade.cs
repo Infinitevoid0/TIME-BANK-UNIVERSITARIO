@@ -18,6 +18,9 @@ public class Atividade
 
     public StatusAtividade Status { get; set; }
 
+    [MaxLength(1000, ErrorMessage = "O feedback deve ter no máximo 1000 caracteres.")]
+    public string? FeedbackModeracao { get; set; }
+
     // FK Ofertante (Quem publicou)
     public int OfertanteId { get; set; }
     public Usuario? Ofertante { get; set; }

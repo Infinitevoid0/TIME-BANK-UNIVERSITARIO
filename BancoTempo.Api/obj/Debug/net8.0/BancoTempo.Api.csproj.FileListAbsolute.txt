@@ -111,3 +111,4 @@
 /home/gerhardtth/Documentos/timebank/dozerotimebank/BancoTempo.Api/obj/Debug/net8.0/BancoTempo.Api.genruntimeconfig.cache
 /home/gerhardtth/Documentos/timebank/dozerotimebank/BancoTempo.Api/obj/Debug/net8.0/ref/BancoTempo.Api.dll
 /home/gerhardtth/Documentos/timebank/dozerotimebank/BancoTempo.Api/bin/Debug/net8.0/BancoTempo.Api.staticwebassets.runtime.json
+/home/gerhardtth/Documentos/timebank/dozerotimebank/BancoTempo.Api/obj/Debug/net8.0/BancoTempo.Api.sourcelink.json

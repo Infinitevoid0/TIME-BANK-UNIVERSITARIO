@@ -65,7 +65,7 @@ const ModeracaoPreviewModal = ({ isOpen, onClose, atividade, onReprovar, onVerDe
                         className="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-colors"
                     >
                         <XCircle className="w-4 h-4 mr-2" />
-                        Reprovar
+                        Reprovar Totalmente
                     </button>
                     <button
                         type="button"

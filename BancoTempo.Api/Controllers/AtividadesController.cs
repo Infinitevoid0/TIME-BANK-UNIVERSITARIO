@@ -158,7 +158,7 @@ namespace BancoTempo.Api.Controllers
                 return NotFound();
             }
 
-            if (atividade.Status == StatusAtividade.Pendente && novoStatus == StatusAtividade.Aprovada)
+            if ((atividade.Status == StatusAtividade.Pendente || atividade.Status == StatusAtividade.PendentePosCorrecao) && novoStatus == StatusAtividade.Aprovada)
             {
                  atividade.Status = novoStatus;
                  await _context.SaveChangesAsync();
@@ -178,12 +178,79 @@ namespace BancoTempo.Api.Controllers
                 return NotFound();
             }
 
-            if (atividade.Status != StatusAtividade.Pendente)
+            if (atividade.Status != StatusAtividade.Pendente && atividade.Status != StatusAtividade.PendentePosCorrecao)
             {
                 return BadRequest("Apenas atividades pendentes podem ser reprovadas.");
             }
 
             atividade.Status = StatusAtividade.Recusada;
+            await _context.SaveChangesAsync();
+
+            return Ok(atividade);
+        }
+
+        // PUT /api/atividades/{id}/solicitar-correcao
+        [HttpPut("{id}/solicitar-correcao")]
+        public async Task<IActionResult> SolicitarCorrecao(int id, [FromBody] DTOs.SolicitarCorrecaoDto dto)
+        {
+            var atividade = await _context.Atividades.FindAsync(id);
+            if (atividade == null)
+            {
+                return NotFound();
+            }
+
+            if (atividade.Status != StatusAtividade.Pendente)
+            {
+                return BadRequest("Apenas atividades no status inicial pendente podem receber solicitação de correção.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Feedback))
+            {
+                return BadRequest("O feedback não pode estar vazio.");
+            }
+
+            atividade.Status = StatusAtividade.NecessitaCorrecao;
+            atividade.FeedbackModeracao = dto.Feedback;
+            await _context.SaveChangesAsync();
+
+            return Ok(atividade);
+        }
+
+        // PUT /api/atividades/{id}/corrigir
+        [HttpPut("{id}/corrigir")]
+        public async Task<IActionResult> CorrigirAtividade(int id, [FromBody] DTOs.CorrigirAtividadeDto dto)
+        {
+            var atividade = await _context.Atividades.FindAsync(id);
+            if (atividade == null)
+            {
+                return NotFound();
+            }
+
+            if (atividade.Status != StatusAtividade.NecessitaCorrecao)
+            {
+                return BadRequest("Apenas atividades que necessitam correção podem ser corrigidas através desta rota.");
+            }
+
+            if (dto.CustoHoras < 1)
+            {
+                return BadRequest("O custo deve ser de no mínimo 1 hora.");
+            }
+
+            if (dto.Titulo != null && dto.Titulo.Length > 120)
+            {
+                return BadRequest("O título deve ter no máximo 120 caracteres.");
+            }
+
+            if (dto.Descricao != null && dto.Descricao.Length > 5000)
+            {
+                return BadRequest("A descrição deve ter no máximo 5000 caracteres.");
+            }
+
+            atividade.Titulo = dto.Titulo;
+            atividade.Descricao = dto.Descricao;
+            atividade.CustoHoras = dto.CustoHoras;
+            atividade.Status = StatusAtividade.PendentePosCorrecao;
+            
             await _context.SaveChangesAsync();
 
             return Ok(atividade);

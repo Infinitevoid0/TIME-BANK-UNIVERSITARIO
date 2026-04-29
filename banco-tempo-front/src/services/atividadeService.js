@@ -45,3 +45,13 @@ export const uploadAnexo = async (atividadeId, file) => {
     });
     return response.data;
 };
+
+export const solicitarCorrecao = async (id, feedback) => {
+    const response = await api.put(`/atividades/${id}/solicitar-correcao`, { feedback });
+    return response.data;
+};
+
+export const corrigirAtividade = async (id, atividade) => {
+    const response = await api.put(`/atividades/${id}/corrigir`, atividade);
+    return response.data;
+};
