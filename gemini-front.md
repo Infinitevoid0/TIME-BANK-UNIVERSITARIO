@@ -167,8 +167,9 @@ Componentes na pasta `src/components/atividades/`:
     * **Exibição da Descrição na Tabela:** As descrições de atividade no mural **não devem** exibir tags HTML brutas. Deve-se exibir um trecho resumido em texto plano (stripped de tags HTML, ex: usando `replace(/<[^>]*>/g, '')`) truncado em ~100 caracteres, seguido de "..." se ultrapassar. A descrição completa em HTML é exibida somente na `AtividadeDetalhesPage`.
 * **AtividadeFormModal:**
     * **Campos:** `Titulo` (input com `maxLength="120"` e contador de caracteres), `Descricao` (Editor Rich Text / Hipertexto com limite de 5000 caracteres e contador), `CustoHoras` (Input numérico com `min="1"`), `DisciplinaId` (Select opcional populado dinamicamente) e opção de **anexar documentos** (upload de arquivos PDF/imagens, máx. 5MB cada).
+    * **Modo Correção:** Este mesmo modal deve ser reaproveitado quando o aluno clicar em "Corrigir Atividade". Nesse caso, ele deve exibir uma área de alerta no topo contendo o `FeedbackModeracao` do professor, e o botão de salvar chamará o `PUT /api/atividades/{id}/corrigir`.
     * **Scroll no Editor Rich Text (Correção Crítica):** O container do editor de descrição deve permitir **scroll vertical** quando o texto do usuário exceder a altura visível do campo. O editor **não pode travar, bloquear a digitação, nem impedir a rolagem do conteúdo**. Aplicar ao container do editor: `overflow-y: auto` com `max-height` adequado (ex: `max-h-72` ou `300px`). O wrapper `RichTextEditor.jsx` e/ou o CSS global devem garantir que `.ql-editor` (Quill) tenha estas propriedades.
-    * **Regra de Otimização:** Ao receber o retorno do `POST` (que contém a atividade gerada e o ID do Ofertante associado), o estado local de atividades deve ser atualizado com o `spread operator` (`[...prev, novaAtividade]`), sem realizar um novo GET na API.
+    * **Regra de Otimização:** Ao receber o retorno do `POST` ou `PUT`, o estado local de atividades deve ser atualizado com o `spread operator` ou `map` (`[...prev, novaAtividade]`), sem realizar um novo GET na API.
 * **AtividadeDetalhesPage:**
     * Página acessível via `/atividades/:id`.
     * Exibe: Título, Descrição completa (renderizada como HTML via `dangerouslySetInnerHTML`), Custo em Horas, Status (Badge), Disciplina vinculada, Nome do Ofertante (clicável, redirecionando para o perfil público do estudante se aplicável) e lista de Documentos Anexados (com links para download).
@@ -180,22 +181,28 @@ Componentes na pasta `src/components/minhas-atividades/`:
 * **MinhasAtividadesPage:**
     * Chama `GET /api/atividades/minhas/{userId}` para obter somente as atividades do aluno logado.
     * Renderiza uma tabela/lista com **todas** as atividades do aluno e seus respectivos status, incluindo as que foram recusadas.
+    * **Ações por Status:**
+        * Se a atividade estiver com status `NecessitaCorrecao` (6), deve exibir um botão/ícone de **"Corrigir"** e um ícone de "info" ou tooltip mostrando o `FeedbackModeracao` enviado pelo professor. O botão "Corrigir" abre o `AtividadeFormModal` em modo de edição.
     * **Badges de Status:** Deve utilizar badges coloridas para cada estado:
         * Pendente de Aprovação: `bg-yellow-100 text-yellow-800`
-        * Ativa (Aprovada): `bg-green-100 text-green-800`
+        * Aprovada: `bg-green-100 text-green-800`
         * Em Andamento: `bg-blue-100 text-blue-800`
-        * Finalizada (Concluída): `bg-gray-100 text-gray-800`
+        * Concluída: `bg-gray-100 text-gray-800`
         * Recusada: `bg-red-100 text-red-800`
+        * Necessita Correção: `bg-orange-100 text-orange-800`
+        * Pendente (Corrigida): `bg-indigo-100 text-indigo-800`
 
 ### 6.5. Moderação de Atividades (Visão Moderador / Admin)
 Componentes na pasta `src/components/moderacao/`:
 
-* **ModeracaoPage:** Tabela que lista **apenas** atividades com `Status === 1` (Pendente). Ao clicar em uma linha/botão "Revisar", abre o `ModeracaoPreviewModal`.
+* **ModeracaoPage:** Tabela que lista atividades que aguardam moderação, ou seja, com `Status === 1` (Pendente) ou `Status === 7` (Pendente Pós-Correção).
+    * **Filtro de Pendências:** Deve incluir um toggle/checkbox **"Somente atividades corrigidas"** que, quando ativo, filtra a lista para exibir apenas as que retornaram corrigidas (`Status === 7`).
+    * Ao clicar em uma linha/botão "Revisar", abre o `ModeracaoPreviewModal`.
 * **ModeracaoPreviewModal (Modal Resumo Inicial):**
     * Exibe informações básicas da atividade pendente: Título, Ofertante, Custo em Horas, Data de Criação.
     * Contém **dois botões de ação:**
         * **"Ver Mais Detalhes":** Fecha o modal e redireciona o moderador para a rota `/moderacao/:id` (abrindo a `ModeracaoDetalhesPage`).
-        * **"Reprovar":** Abre um `ConfirmDialog` de confirmação e, após confirmação, chama `PUT /api/atividades/{id}/reprovar`. Em caso de sucesso, remove a atividade da lista local (`prev.filter`) e dispara `toast.success`.
+        * **"Reprovar Totalmente":** Abre um `ConfirmDialog` de confirmação e, após confirmação, chama `PUT /api/atividades/{id}/reprovar`. Em caso de sucesso, remove a atividade da lista local (`prev.filter`) e dispara `toast.success`.
     * **Regra de Otimização:** Tanto a aprovação quanto a reprovação devem atualizar a lista local sem realizar novo GET.
 * **ModeracaoDetalhesPage (Página de Detalhes Completa):**
     * Rota: `/moderacao/:id`. Carrega a atividade completa via `GET /api/atividades/{id}`.
@@ -203,7 +210,11 @@ Componentes na pasta `src/components/moderacao/`:
     * **Scroll da Descrição (Correção Crítica):** O container da descrição HTML deve usar **scroll vertical** (`overflow-y-auto max-h-96`), **nunca horizontal**. Aplicar obrigatoriamente `overflow-x-hidden` e `break-words` (Tailwind: `overflow-x-hidden overflow-y-auto max-h-96 break-words`) para que linhas longas quebrem em vez de forçarem scroll lateral.
     * **Documentos Anexados:** Lista os documentos da atividade (`GET /api/anexos/{atividadeId}`) com links para download/visualização.
     * **Link para o Perfil do Ofertante:** Nome do ofertante exibido como link clicável, redirecionando para a página de perfil do estudante (`/usuarios/:id` ou modal de visualização).
-    * **Botões de Ação:** "Aprovar" (chama `PUT /api/atividades/{id}/moderar` com Status 2) e "Reprovar" (chama `PUT /api/atividades/{id}/reprovar`). Após ação, redireciona de volta para `/moderacao` com `toast.success`.
+    * **Lógica de Botões de Ação por Status:**
+        * **Se `Status === 1` (Pendente Inicial):** Exibir os botões **"Aprovar"**, **"Solicitar Correção"** e **"Reprovar Totalmente"**.
+            * Clicar em "Solicitar Correção" deve abrir um modal simples (`ConfirmDialog` adaptado ou novo modal) contendo um textarea para o moderador digitar o motivo/instruções (`FeedbackModeracao`). O submit chama `PUT /api/atividades/{id}/solicitar-correcao`.
+        * **Se `Status === 7` (Pendente Pós-Correção):** Exibir **apenas** os botões **"Aprovar"** e **"Reprovar Totalmente"**. O aluno já gastou a chance de correção. Exiba de forma visual (ex: um aviso "Retorno de Correção" no topo e o feedback anterior).
+        * Após qualquer ação bem sucedida, redireciona de volta para `/moderacao` com `toast.success`.
 
 ### 6.6. Edição de Usuários (Visão Moderador e Admin)
 Componentes na pasta `src/components/usuarios/`:
@@ -250,6 +261,8 @@ A IA deve estritamente seguir as diretrizes visuais da "V2":
     * Em Andamento: `bg-blue-100 text-blue-800`
     * Concluída: `bg-gray-100 text-gray-800`
     * Recusada: `bg-red-100 text-red-800`
+    * Necessita Correção: `bg-orange-100 text-orange-800`
+    * Pendente (Corrigida): `bg-indigo-100 text-indigo-800`
 * **Badges de Papel de Usuário:**
     * Aluno: `bg-gray-100 text-gray-800`
     * Moderador: `bg-purple-100 text-purple-800`

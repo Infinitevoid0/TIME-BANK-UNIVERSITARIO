@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { getAtividades, reprovarAtividade } from '../../services/atividadeService';
 import ModeracaoPreviewModal from './ModeracaoPreviewModal';
 import { useToast } from '../../hooks/useToast';
-import { ShieldAlert, CheckCircle, Clock } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const ModeracaoPage = () => {
     const [atividades, setAtividades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedAtividade, setSelectedAtividade] = useState(null);
+    const [mostrarApenasCorrigidas, setMostrarApenasCorrigidas] = useState(false);
     const toast = useToast();
     const navigate = useNavigate();
 
@@ -28,7 +29,12 @@ const ModeracaoPage = () => {
         }
     };
 
-    const pendentes = atividades.filter(a => a.status === 1);
+    const pendentes = atividades.filter(a => {
+        if (mostrarApenasCorrigidas) {
+            return a.status === 7;
+        }
+        return a.status === 1 || a.status === 7;
+    });
 
     const handleRemoveLocal = (idAtividade) => {
         setAtividades(prev => prev.filter(a => a.id !== idAtividade));
@@ -69,6 +75,23 @@ const ModeracaoPage = () => {
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">Revise e aprove ou reprove atividades extra-curriculares.</p>
                 </div>
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => setMostrarApenasCorrigidas(!mostrarApenasCorrigidas)}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                            mostrarApenasCorrigidas
+                                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                        {mostrarApenasCorrigidas
+                            ? <ToggleRight className="w-5 h-5 text-indigo-600" />
+                            : <ToggleLeft className="w-5 h-5 text-gray-400" />
+                        }
+                        Somente atividades corrigidas
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -86,7 +109,14 @@ const ModeracaoPage = () => {
                         {pendentes.map((atividade) => (
                             <tr key={atividade.id} className="hover:bg-yellow-50/30 transition-colors">
                                 <td className="px-6 py-4">
-                                    <div className="text-sm font-medium text-gray-900">{atividade.titulo}</div>
+                                    <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        {atividade.titulo}
+                                        {atividade.status === 7 && (
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                Corrigida
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {atividade.ofertante?.nome || 'N/A'}

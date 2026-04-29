@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getMinhasAtividades } from '../../services/atividadeService';
+import api from '../../services/api';
+import AtividadeFormModal from '../atividades/AtividadeFormModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { ClipboardList, Clock, Eye, AlertCircle } from 'lucide-react';
+import { ClipboardList, Clock, Eye, AlertCircle, Edit2, Info } from 'lucide-react';
 
 const getStatusBadge = (status) => {
     switch (status) {
@@ -12,21 +14,30 @@ const getStatusBadge = (status) => {
         case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Andamento</span>;
         case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Finalizada</span>;
         case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Recusada</span>;
+        case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
+        case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Pendente (Corrigida)</span>;
         default: return null;
     }
 };
 
 const MinhasAtividadesPage = () => {
     const [atividades, setAtividades] = useState([]);
+    const [disciplinas, setDisciplinas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [atividadeCorrigir, setAtividadeCorrigir] = useState(null);
     const { user } = useAuth();
     const toast = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const data = await getMinhasAtividades(user.id);
+                const [data, disciplinasData] = await Promise.all([
+                    getMinhasAtividades(user.id),
+                    api.get('/disciplinas').then(res => res.data)
+                ]);
                 setAtividades(data);
+                setDisciplinas(disciplinasData);
             } catch {
                 toast.error('Erro ao buscar suas atividades.');
             } finally {
@@ -35,6 +46,18 @@ const MinhasAtividadesPage = () => {
         };
         fetchData();
     }, [user.id]);
+
+    const handleOpenCorrigir = (atividade) => {
+        setAtividadeCorrigir(atividade);
+        setModalOpen(true);
+    };
+
+    const handleCorrigirSuccess = (atividadeAtualizada) => {
+        setAtividades(prev => prev.map(a => a.id === atividadeAtualizada.id ? atividadeAtualizada : a));
+        setModalOpen(false);
+        setAtividadeCorrigir(null);
+        toast.success("Atividade corrigida com sucesso!");
+    };
 
     if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -78,10 +101,29 @@ const MinhasAtividadesPage = () => {
                                     {getStatusBadge(atividade.status)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <Link to={`/atividades/${atividade.id}`} className="inline-flex items-center text-blue-600 hover:text-blue-900 transition-colors">
-                                        <Eye className="w-4 h-4 mr-1" />
-                                        Detalhes
-                                    </Link>
+                                    <div className="flex items-center justify-end gap-3">
+                                        {atividade.status === 6 && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative group cursor-pointer text-orange-500 hover:text-orange-700">
+                                                    <Info className="w-4 h-4" />
+                                                    <div className="absolute bottom-full right-0 mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-pre-wrap">
+                                                        {atividade.feedbackModeracao || "Necessita ajustes."}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleOpenCorrigir(atividade)}
+                                                    className="inline-flex items-center text-orange-600 hover:text-orange-900 transition-colors"
+                                                >
+                                                    <Edit2 className="w-4 h-4 mr-1" />
+                                                    Corrigir
+                                                </button>
+                                            </div>
+                                        )}
+                                        <Link to={`/atividades/${atividade.id}`} className="inline-flex items-center text-blue-600 hover:text-blue-900 transition-colors">
+                                            <Eye className="w-4 h-4 mr-1" />
+                                            Detalhes
+                                        </Link>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -96,6 +138,16 @@ const MinhasAtividadesPage = () => {
                     </tbody>
                 </table>
             </div>
+
+            {modalOpen && (
+                <AtividadeFormModal
+                    isOpen={modalOpen}
+                    onClose={() => { setModalOpen(false); setAtividadeCorrigir(null); }}
+                    onSuccess={handleCorrigirSuccess}
+                    disciplinas={disciplinas}
+                    atividadeParaCorrigir={atividadeCorrigir}
+                />
+            )}
         </div>
     );
 };

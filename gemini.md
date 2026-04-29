@@ -34,11 +34,13 @@ public enum TipoUsuario
 
 public enum StatusAtividade
 {
-    Pendente = 1,    // Requer moderação (atividades sem disciplina)
-    Aprovada = 2,    // Aprovada pelo moderador ou atrelada a uma disciplina
-    EmAndamento = 3, // Comprador aceitou, aguardando finalização
-    Concluida = 4,   // Horas transferidas
-    Recusada = 5     // Reprovada pelo moderador
+    Pendente = 1,              // Requer moderação (atividades sem disciplina)
+    Aprovada = 2,              // Aprovada pelo moderador ou atrelada a uma disciplina
+    EmAndamento = 3,           // Comprador aceitou, aguardando finalização
+    Concluida = 4,             // Horas transferidas
+    Recusada = 5,              // Reprovada pelo moderador (rejeição final)
+    NecessitaCorrecao = 6,     // Moderador solicitou ajustes ao aluno
+    PendentePosCorrecao = 7    // Aluno enviou correção, aguardando aprovação ou rejeição final
 }
 ```
 
@@ -155,6 +157,10 @@ public class Atividade
     public int CustoHoras { get; set; }
 
     public StatusAtividade Status { get; set; }
+
+    // Armazena a mensagem do moderador caso a atividade necessite correção
+    [MaxLength(1000, ErrorMessage = "O feedback deve ter no máximo 1000 caracteres.")]
+    public string? FeedbackModeracao { get; set; }
 
     // FK Ofertante (Quem publicou)
     public int OfertanteId { get; set; }
@@ -407,10 +413,16 @@ public class AdminUpdateDto
 4. Salvar no banco.
 
 **Lógica exigida no PUT para Moderação (Aprovar):**
-Criar um endpoint específico `PUT /api/atividades/{id}/moderar` que recebe apenas o novo Status. O Controller deve verificar se a atividade existe e atualizar o Status de `Pendente` para `Aprovada`.
+Criar um endpoint específico `PUT /api/atividades/{id}/moderar`. O Controller deve verificar se a atividade existe e atualizar o Status para `Aprovada`. Válido apenas se o status atual for `Pendente` (1) ou `PendentePosCorrecao` (7).
 
 **Lógica exigida no PUT para Reprovação (`PUT /api/atividades/{id}/reprovar`):**
-Criar um endpoint específico que altera o Status de `Pendente` para `Recusada` (5). O Controller deve verificar se a atividade existe e se está no status `Pendente` antes de permitir a alteração.
+Criar um endpoint específico que altera o Status para `Recusada` (5). Válido apenas se o status atual for `Pendente` (1) ou `PendentePosCorrecao` (7).
+
+**Lógica exigida no PUT para Solicitar Correção (`PUT /api/atividades/{id}/solicitar-correcao`):**
+Criar um endpoint específico que recebe um DTO contendo a propriedade `Feedback`. O Controller deve verificar se a atividade existe e se está no status `Pendente` (1). Se sim, altera o Status para `NecessitaCorrecao` (6) e salva o feedback em `FeedbackModeracao`. **Esta ação só pode ser realizada uma vez por atividade** (garantido pois a atividade muda para status 6 e posteriormente para 7, que não permite nova solicitação de correção).
+
+**Lógica exigida no PUT para Aluno Corrigir Atividade (`PUT /api/atividades/{id}/corrigir`):**
+Endpoint para o aluno re-submeter sua oferta após correção. Recebe as propriedades atualizáveis da atividade (Título, Descrição, CustoHoras). Válido **apenas** se o status atual for `NecessitaCorrecao` (6). O Controller atualiza os dados e altera o Status automaticamente para `PendentePosCorrecao` (7). O `FeedbackModeracao` pode ser mantido para histórico ou limpado.
 
 **Lógica exigida no GET de Atividades por Ofertante (`GET /api/atividades/minhas/{ofertanteId}`):**
 Retornar todas as atividades de um usuário específico (filtradas por `OfertanteId`), incluindo todos os status (Pendente, Aprovada, EmAndamento, Concluída, Recusada). Serve para o aluno acompanhar suas próprias ofertas.
@@ -494,7 +506,9 @@ BancoTempo.Api/
 |   |-- LoginDto.cs                   ← Payload de autenticação
 |   |-- UsuarioUpdateDto.cs           ← Edição de perfil próprio (sem senha/tipo)
 |   |-- ModeradorUpdateDto.cs         ← Edição pelo Moderador (apenas tipo, com proteção)
-|   +-- AdminUpdateDto.cs            ← Edição completa pelo Administrador (inclui créditos)
+|   |-- AdminUpdateDto.cs             ← Edição completa pelo Administrador (inclui créditos)
+|   |-- SolicitarCorrecaoDto.cs       ← DTO para o Moderador enviar o feedback de correção
+|   +-- CorrigirAtividadeDto.cs       ← DTO para o Aluno re-submeter os dados alterados
 |-- Models/
 |   |-- Enums.cs                      ← Inclui TipoUsuario.Administrador e StatusAtividade.Recusada
 |   |-- Curso.cs
