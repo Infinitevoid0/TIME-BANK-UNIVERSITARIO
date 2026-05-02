@@ -174,10 +174,10 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                     </div>
                 </div>
 
-                {formData.disciplinaId === '' && (
+                {!isCorrecao && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-xs text-yellow-800 font-medium">
-                            Nota: Atividades sem disciplina vinculada entrarão no status Pendente e precisarão de aprovação da moderação.
+                            Nota: Toda nova atividade entrará no status Pendente e precisará da aprovação da moderação antes de ficar visível na comunidade.
                         </p>
                     </div>
                 )}

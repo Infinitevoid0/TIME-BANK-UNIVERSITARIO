@@ -34,8 +34,8 @@ public enum TipoUsuario
 
 public enum StatusAtividade
 {
-    Pendente = 1,              // Requer moderação (atividades sem disciplina)
-    Aprovada = 2,              // Aprovada pelo moderador ou atrelada a uma disciplina
+    Pendente = 1,              // Requer moderação inicial
+    Aprovada = 2,              // Aprovada pelo moderador
     EmAndamento = 3,           // Comprador aceitou, aguardando finalização
     Concluida = 4,             // Horas transferidas
     Recusada = 5,              // Reprovada pelo moderador (rejeição final)
@@ -68,7 +68,7 @@ public class Curso
 
 ### 1.3. Entidade Disciplina
 
-Matérias atreladas aos cursos. Se uma atividade é vinculada a uma disciplina, ela "pula" a moderação.
+Matérias atreladas aos cursos.
 
 ```csharp
 // Models/Disciplina.cs
@@ -408,8 +408,7 @@ public class AdminUpdateDto
 1. Validar Custo Mínimo (`>= 1`).
 2. Validar limite de caracteres: Título (máx. 120), Descrição (máx. 5000).
 3. **Definição de Status Automática:**
-   * Se `DisciplinaId` possui valor (atividade curricular) -> `Status = StatusAtividade.Aprovada`.
-   * Se `DisciplinaId` é nulo (atividade por fora) -> `Status = StatusAtividade.Pendente`.
+   * Todas as atividades recém criadas começam obrigatoriamente com `Status = StatusAtividade.Pendente`.
 4. Salvar no banco.
 
 **Lógica exigida no PUT para Moderação (Aprovar):**

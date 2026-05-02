@@ -110,7 +110,7 @@ namespace BancoTempo.Api.Controllers
                 CustoHoras = dto.CustoHoras,
                 OfertanteId = dto.OfertanteId,
                 DisciplinaId = dto.DisciplinaId,
-                Status = dto.DisciplinaId.HasValue ? StatusAtividade.Aprovada : StatusAtividade.Pendente
+                Status = StatusAtividade.Pendente
             };
 
             _context.Atividades.Add(atividade);
