@@ -161,22 +161,26 @@ const UsuarioFormModal = ({ isOpen, onClose, onSuccess, usuario, cursos }) => {
                         )}
                     </div>
 
-                    {/* Tipo - Moderador e Admin editam, mas não a si próprio */}
+                    {/* Tipo - Moderador e Admin editam, mas não a si próprio nem Admin se for Moderador */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Acesso</label>
                         <select
                             name="tipo"
                             value={formData.tipo}
                             onChange={handleChange}
-                            disabled={isSelf}
-                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isSelf ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            disabled={isSelf || (!isAdmin && usuario?.tipo === 3)}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${(isSelf || (!isAdmin && usuario?.tipo === 3)) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         >
                             <option value="1">Aluno</option>
                             <option value="2">Moderador</option>
                             {isAdmin && <option value="3">Administrador</option>}
+                            {(!isAdmin && usuario?.tipo === 3) && <option value="3">Administrador</option>}
                         </select>
                         {isSelf && (
                             <p className="mt-1 text-xs text-gray-400">Você não pode alterar seu próprio nível.</p>
+                        )}
+                        {(!isAdmin && usuario?.tipo === 3) && (
+                            <p className="mt-1 text-xs text-red-500">Moderadores não podem alterar o acesso de Administradores.</p>
                         )}
                     </div>
                 </div>

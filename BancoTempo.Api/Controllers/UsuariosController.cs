@@ -136,6 +136,18 @@ namespace BancoTempo.Api.Controllers
             var usuario = await _context.Usuarios.FindAsync(id);
             if (usuario == null) return NotFound();
 
+            // Proteção extra: Moderador não pode alterar tipo de um Administrador
+            if (usuario.Tipo == TipoUsuario.Administrador)
+            {
+                return BadRequest("Um moderador não pode alterar o tipo de um administrador.");
+            }
+
+            // Proteção extra: Moderador não pode promover alguém a Administrador
+            if (dto.Tipo == TipoUsuario.Administrador)
+            {
+                return BadRequest("Um moderador não pode promover um usuário a administrador.");
+            }
+
             usuario.Tipo = dto.Tipo;
             // Nome, Email, CursoId, SenhaHash e SaldoHoras permanecem inalterados
 

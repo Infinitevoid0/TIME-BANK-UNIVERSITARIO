@@ -19,9 +19,16 @@ const formats = [
 ];
 
 const RichTextEditor = ({ value, onChange, maxLength = 5000, placeholder = 'Escreva aqui...' }) => {
-    // Conta a string real incluindo formatações, pois o banco limita o tamanho total salvo.
-    const charCount = value ? value.length : 0;
-    const isOverLimit = charCount > maxLength;
+    // Quill insere tags vazias por padrão. Se for apenas isso, contamos como 0 para melhorar a UX.
+    const isEmpty = !value || value === '<p><br></p>' || value === '<p></p>';
+    
+    // Para a UX, contamos apenas o texto visível (plain text) removendo as tags HTML
+    const plainText = isEmpty ? '' : value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+    const charCount = plainText.length;
+    
+    // Porém, o limite real é testado no tamanho da string bruta que vai pro banco de dados
+    const rawLength = value ? value.length : 0;
+    const isOverLimit = rawLength > maxLength;
 
     return (
         <div>

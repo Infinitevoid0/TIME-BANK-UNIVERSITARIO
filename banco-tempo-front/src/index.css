@@ -7,6 +7,17 @@ body {
   background-color: #f3f4f6;
 }
 
+/* Global Button Cursor Fix */
+button, 
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+button[disabled] {
+  cursor: not-allowed;
+}
+
 /* Quill Editor Overrides */
 .ql-container {
   border-bottom-left-radius: 0.5rem;
