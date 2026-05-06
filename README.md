@@ -1,6 +1,6 @@
 # Banco de Tempo Universitário (UFSC)
 
-Este é o repositório do projeto **Banco de Tempo Universitário**, desenvolvido como Trabalho de Conclusão de Curso (TCC) para o curso de Tecnologia da Informação e Comunicação (TIC) da Universidade Federal de Santa Catarina (UFSC) - Campus Araranguá.
+Este é o repositório do projeto **Banco de Tempo Universitário**, para o curso de Tecnologia da Informação e Comunicação (TIC) da Universidade Federal de Santa Catarina (UFSC) - Campus Araranguá.
 
 ## Sobre o Projeto
 
