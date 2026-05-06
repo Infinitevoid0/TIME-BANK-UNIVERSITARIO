@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Modal from '../ui/Modal';
 import RichTextEditor from '../ui/RichTextEditor';
-import { createAtividade, corrigirAtividade } from '../../services/atividadeService';
+import { createAtividade, corrigirAtividade, uploadAnexo } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
@@ -19,18 +19,24 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
         custoHoras: atividadeParaCorrigir?.custoHoras || 1,
         disciplinaId: atividadeParaCorrigir?.disciplinaId || ''
     });
+    const [arquivos, setArquivos] = useState([]);
     const [loading, setLoading] = useState(false);
     const toast = useToast();
 
     // A API e o Banco de Dados limitam a string (com HTML) a 5000 caracteres.
-    // É obrigatório contabilizar o length real, incluindo as tags.
-    const descricaoRealLength = formData.descricao ? formData.descricao.length : 0;
+    // Ignorar tags vazias iniciais para a validação real.
+    const isDescricaoEmpty = !formData.descricao || formData.descricao === '<p><br></p>' || formData.descricao === '<p></p>';
+    const descricaoRealLength = isDescricaoEmpty ? 0 : formData.descricao.length;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (formData.titulo.length > TITULO_MAX) {
             toast.error(`O título deve ter no máximo ${TITULO_MAX} caracteres.`);
+            return;
+        }
+        if (descricaoRealLength === 0) {
+            toast.error('A descrição da atividade é obrigatória.');
             return;
         }
         if (descricaoRealLength > DESCRICAO_MAX) {
@@ -66,6 +72,12 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
 
                 const novaAtividade = await createAtividade(payload);
                 
+                if (arquivos.length > 0) {
+                    for (const arquivo of arquivos) {
+                        await uploadAnexo(novaAtividade.id, arquivo);
+                    }
+                }
+                
                 atividadeResultado = {
                     ...novaAtividade,
                     ofertante: { nome: user.nome },
@@ -76,6 +88,7 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
             onSuccess(atividadeResultado);
             if (!isCorrecao) {
                 setFormData({ titulo: '', descricao: '', custoHoras: 1, disciplinaId: '' });
+                setArquivos([]);
             }
         } catch (error) {
             const errData = error.response?.data;
@@ -96,6 +109,35 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        const validFiles = [];
+        for (let file of selectedFiles) {
+            const isDuplicate = arquivos.some(a => a.name === file.name && a.size === file.size) || 
+                                validFiles.some(a => a.name === file.name && a.size === file.size);
+            
+            if (isDuplicate) {
+                toast.error(`O arquivo ${file.name} já foi adicionado.`);
+                continue;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error(`O arquivo ${file.name} excede o limite de 10MB.`);
+            } else if (file.type !== 'application/pdf') {
+                toast.error(`O arquivo ${file.name} não é um PDF válido.`);
+            } else {
+                validFiles.push(file);
+            }
+        }
+        setArquivos(prev => [...prev, ...validFiles]);
+        // Reset file input value so the same file can be selected again if removed
+        e.target.value = null;
+    };
+
+    const removeArquivo = (index) => {
+        setArquivos(prev => prev.filter((_, i) => i !== index));
     };
 
     return (
@@ -173,6 +215,35 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                         </select>
                     </div>
                 </div>
+
+                {!isCorrecao && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Anexos (PDF, máx. 10MB por arquivo)</label>
+                        <input
+                            type="file"
+                            accept="application/pdf"
+                            multiple
+                            onChange={handleFileChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
+                        />
+                        {arquivos.length > 0 && (
+                            <ul className="mt-2 space-y-2">
+                                {arquivos.map((arq, idx) => (
+                                    <li key={idx} className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                        <span className="truncate mr-4">{arq.name}</span>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => removeArquivo(idx)} 
+                                            className="text-red-500 hover:text-red-700 text-xs font-medium"
+                                        >
+                                            Remover
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
 
                 {!isCorrecao && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAtividade, getAnexos } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
 import { ArrowLeft, Clock, BookOpen, User, Paperclip, Download, Calendar } from 'lucide-react';
@@ -17,6 +17,7 @@ const getStatusBadge = (status) => {
 
 const AtividadeDetalhesPage = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [atividade, setAtividade] = useState(null);
     const [anexos, setAnexos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,10 +46,10 @@ const AtividadeDetalhesPage = () => {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
-            <Link to="/atividades" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            <button onClick={() => navigate(-1)} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Voltar ao Mural
-            </Link>
+                Voltar
+            </button>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
