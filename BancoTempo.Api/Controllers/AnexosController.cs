@@ -14,7 +14,7 @@ namespace BancoTempo.Api.Controllers
 
         // Tipos de arquivo permitidos
         private static readonly string[] TiposPermitidos = { "application/pdf", "image/png", "image/jpeg", "image/jpg" };
-        private const long TamanhoMaximoBytes = 5 * 1024 * 1024; // 5 MB
+        private const long TamanhoMaximoBytes = 10 * 1024 * 1024; // 10 MB
 
         public AnexosController(AppDbContext context, IWebHostEnvironment env)
         {
@@ -56,12 +56,24 @@ namespace BancoTempo.Api.Controllers
 
             if (arquivo.Length > TamanhoMaximoBytes)
             {
-                return BadRequest("O arquivo excede o tamanho máximo permitido de 5 MB.");
+                return BadRequest("O arquivo excede o tamanho máximo permitido de 10 MB.");
             }
 
             if (!TiposPermitidos.Contains(arquivo.ContentType.ToLower()))
             {
                 return BadRequest("Tipo de arquivo não permitido. Envie PDF, PNG ou JPG.");
+            }
+
+            // Integridade de Dados: impedir envio de PDF duplicado para a mesma atividade
+            if (arquivo.ContentType.ToLower() == "application/pdf")
+            {
+                var arquivoDuplicado = await _context.AnexosAtividades
+                    .AnyAsync(a => a.AtividadeId == atividadeId && a.NomeArquivo == arquivo.FileName);
+
+                if (arquivoDuplicado)
+                {
+                    return BadRequest("Um arquivo PDF com este mesmo nome já foi anexado a esta atividade.");
+                }
             }
 
             // Criar diretório de upload

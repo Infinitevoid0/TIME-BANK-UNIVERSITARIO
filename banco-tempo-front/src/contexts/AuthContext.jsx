@@ -6,16 +6,12 @@ import { useToast } from '../hooks/useToast';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        const storedUser = localStorage.getItem('bt_user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
     const toast = useToast();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        const storedUser = localStorage.getItem('bt_user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    }, []);
 
     const login = async (email, senha) => {
         try {

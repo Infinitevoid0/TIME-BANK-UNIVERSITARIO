@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
 import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle, Edit2 } from 'lucide-react';
@@ -90,10 +90,10 @@ const ModeracaoDetalhesPage = () => {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
-            <Link to="/moderacao" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            <button onClick={() => navigate(-1)} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Voltar à Fila de Moderação
-            </Link>
+                Voltar
+            </button>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">

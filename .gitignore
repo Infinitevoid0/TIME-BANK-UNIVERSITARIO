@@ -1,0 +1,20 @@
+# .NET Backend
+BancoTempo.Api/bin/
+BancoTempo.Api/obj/
+BancoTempo.Api/api.log
+BancoTempo.Api/wwwroot/uploads/
+BancoTempo.Api/appsettings.json
+BancoTempo.Api/appsettings.Development.json
+
+# Frontend
+banco-tempo-front/node_modules/
+banco-tempo-front/dist/
+banco-tempo-front/.env
+
+# IDE / OS
+.vscode/
+.vs/
+*.user
+*.userprefs
+*.suo
+.DS_Store
