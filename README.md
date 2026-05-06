@@ -8,8 +8,6 @@ O sistema é uma plataforma de economia solidária baseada em troca de tempo. Al
 
 ## Tecnologias Utilizadas
 
-O projeto está dividido em duas partes principais:
-
 ### Backend (`/BancoTempo.Api`)
 * **Framework:** .NET 8 (ASP.NET Core Web API)
 * **Banco de Dados:** PostgreSQL
