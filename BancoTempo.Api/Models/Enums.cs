@@ -9,11 +9,17 @@ public enum TipoUsuario
 
 public enum StatusAtividade
 {
-    Pendente = 1,              // Requer moderação (atividades sem disciplina)
-    Aprovada = 2,              // Aprovada pelo moderador ou atrelada a uma disciplina
-    EmAndamento = 3,           // Comprador aceitou, aguardando finalização
-    Concluida = 4,             // Horas transferidas
-    Recusada = 5,              // Reprovada pelo moderador (rejeição final)
-    NecessitaCorrecao = 6,     // Moderador solicitou ajustes ao aluno
-    PendentePosCorrecao = 7    // Aluno enviou correção, aguardando aprovação ou rejeição final
+    // Ciclo de Oferta (Inicial)
+    Pendente = 1,              // Requer moderação inicial
+    Aprovada = 2,              // Aprovada pelo moderador (visível no mural)
+    Recusada = 3,              // Reprovada pelo moderador na moderação inicial
+    NecessitaCorrecao = 4,     // Moderador solicitou ajustes na oferta
+    PendentePosCorrecao = 5,   // Aluno enviou correção da oferta
+    
+    // Ciclo de Transação e Moderação Final (Pós-Compra)
+    EmExecucao = 6,            // Comprador comprou, aguardando execução e comprovantes de ambos
+    AguardandoValidacao = 7,   // Ambos enviaram comprovantes, aguardando moderação final
+    NecessitaRevisao = 8,      // Moderador solicitou ajustes nos comprovantes (Rodada 1)
+    Validada = 9,              // Comprovantes validados, créditos transferidos ao Ofertante
+    Invalida = 10              // Atividade invalidada, créditos devolvidos ao Comprador
 }

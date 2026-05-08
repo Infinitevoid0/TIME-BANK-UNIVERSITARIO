@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao } from '../../services/atividadeService';
+import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao, moderacaoFinal } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
 import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle, Edit2 } from 'lucide-react';
 import Modal from '../ui/Modal';
@@ -85,6 +85,27 @@ const ModeracaoDetalhesPage = () => {
         }
     };
 
+    const handleModeracaoFinal = async (acao) => {
+        if (acao === 'NecessitaRevisao' && !feedbackTexto.trim()) {
+            toast.error("O feedback não pode estar vazio para solicitar revisão.");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            await moderacaoFinal(atividade.id, acao, acao === 'NecessitaRevisao' ? feedbackTexto : null);
+            toast.success(acao === 'Validar' ? 'Transação validada com sucesso!' : (acao === 'Invalidar' ? 'Transação invalidada.' : 'Revisão solicitada aos usuários.'));
+            navigate('/moderacao');
+        } catch (error) {
+            const errData = error.response?.data;
+            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || 'Erro ao processar moderação final.');
+            toast.error(msg);
+        } finally {
+            setActionLoading(false);
+            if (acao === 'NecessitaRevisao') setShowCorrecaoModal(false);
+        }
+    };
+
     if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
     if (!atividade) return <div className="text-center mt-20 text-gray-500">Atividade não encontrada.</div>;
 
@@ -105,9 +126,19 @@ const ModeracaoDetalhesPage = () => {
                                     Pendente
                                 </span>
                             )}
-                            {atividade.status === 7 && (
+                            {atividade.status === 5 && (
                                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                                     Retorno de Correção
+                                </span>
+                            )}
+                            {atividade.status === 7 && (
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                                    Aguardando Validação
+                                </span>
+                            )}
+                            {atividade.status === 8 && (
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                    Necessita Revisão
                                 </span>
                             )}
                         </div>
@@ -172,32 +203,69 @@ const ModeracaoDetalhesPage = () => {
                 )}
 
                 <div className="p-6 bg-gray-50 flex justify-end gap-3">
-                    <button
-                        onClick={handleReprovar}
-                        disabled={actionLoading}
-                        className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
-                    >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reprovar Totalmente
-                    </button>
-                    {atividade.status === 1 && (
-                        <button
-                            onClick={() => setShowCorrecaoModal(true)}
-                            disabled={actionLoading}
-                            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
-                        >
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Solicitar Correção
-                        </button>
+                    {/* Botões de Moderação Inicial */}
+                    {(atividade.status === 1 || atividade.status === 5) && (
+                        <>
+                            <button
+                                onClick={handleReprovar}
+                                disabled={actionLoading}
+                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
+                            >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reprovar Totalmente
+                            </button>
+                            {atividade.status === 1 && (
+                                <button
+                                    onClick={() => setShowCorrecaoModal(true)}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
+                                >
+                                    <Edit2 className="w-4 h-4 mr-2" />
+                                    Solicitar Correção
+                                </button>
+                            )}
+                            <button
+                                onClick={handleAprovar}
+                                disabled={actionLoading}
+                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70 transition-colors"
+                            >
+                                <Check className="w-4 h-4 mr-2" />
+                                Aprovar Atividade
+                            </button>
+                        </>
                     )}
-                    <button
-                        onClick={handleAprovar}
-                        disabled={actionLoading}
-                        className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70 transition-colors"
-                    >
-                        <Check className="w-4 h-4 mr-2" />
-                        Aprovar Atividade
-                    </button>
+
+                    {/* Botões de Moderação Final */}
+                    {(atividade.status === 7 || atividade.status === 8) && (
+                        <>
+                            <button
+                                onClick={() => handleModeracaoFinal('Invalidar')}
+                                disabled={actionLoading}
+                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
+                            >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Invalidar Transação
+                            </button>
+                            {atividade.status === 7 && (
+                                <button
+                                    onClick={() => setShowCorrecaoModal(true)}
+                                    disabled={actionLoading}
+                                    className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
+                                >
+                                    <Edit2 className="w-4 h-4 mr-2" />
+                                    Solicitar Revisão
+                                </button>
+                            )}
+                            <button
+                                onClick={() => handleModeracaoFinal('Validar')}
+                                disabled={actionLoading}
+                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70 transition-colors"
+                            >
+                                <Check className="w-4 h-4 mr-2" />
+                                Validar Transação
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -205,11 +273,13 @@ const ModeracaoDetalhesPage = () => {
                 <Modal
                     isOpen={showCorrecaoModal}
                     onClose={() => setShowCorrecaoModal(false)}
-                    title="Solicitar Correção"
+                    title={atividade.status === 7 ? "Solicitar Revisão de Comprovantes" : "Solicitar Correção"}
                 >
                     <div className="space-y-4">
                         <p className="text-sm text-gray-600">
-                            Informe ao aluno o que ele precisa corrigir na atividade antes de ser aprovada.
+                            {atividade.status === 7 
+                                ? "Informe detalhadamente o que os usuários precisam corrigir nos comprovantes enviados."
+                                : "Informe ao aluno o que ele precisa corrigir na atividade antes de ser aprovada."}
                         </p>
                         <div>
                             <textarea
@@ -232,7 +302,7 @@ const ModeracaoDetalhesPage = () => {
                                 Cancelar
                             </button>
                             <button
-                                onClick={handleSolicitarCorrecao}
+                                onClick={atividade.status === 7 ? () => handleModeracaoFinal('NecessitaRevisao') : handleSolicitarCorrecao}
                                 disabled={actionLoading || !feedbackTexto.trim()}
                                 className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70"
                             >

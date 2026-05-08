@@ -9,6 +9,7 @@ import ModeracaoPage from './components/moderacao/ModeracaoPage';
 import ModeracaoDetalhesPage from './components/moderacao/ModeracaoDetalhesPage';
 import UsuariosPage from './components/usuarios/UsuariosPage';
 import PerfilPage from './components/perfil/PerfilPage';
+import ChatPage from './components/chat/ChatPage';
 import { useAuth } from './hooks/useAuth';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -66,7 +67,15 @@ function App() {
           } 
         />
         <Route 
-          path="/moderacao" 
+          path="/chat/:atividadeId" 
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/moderacao"  
           element={
             <ProtectedRoute requiredRole={2}>
               <ModeracaoPage />

@@ -70,17 +70,48 @@ namespace BancoTempo.Api.Controllers
             return atividade;
         }
 
-        // GET /api/atividades/minhas/{ofertanteId} — Atividades do próprio usuário
+        // GET /api/atividades/minhas/{ofertanteId} — Atividades ofertadas pelo usuário
         [HttpGet("minhas/{ofertanteId}")]
-        public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasAtividades(int ofertanteId)
+        public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasAtividades(int ofertanteId, [FromQuery] string? status)
         {
-            var atividades = await _context.Atividades
+            var query = _context.Atividades
                 .Where(a => a.OfertanteId == ofertanteId)
                 .Include(a => a.Ofertante)
                 .Include(a => a.Comprador)
                 .Include(a => a.Disciplina)
                 .Include(a => a.Anexos)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                var statusList = status.Split(',').Select(int.Parse).ToList();
+                query = query.Where(a => statusList.Contains((int)a.Status));
+            }
+
+            var atividades = await query.ToListAsync();
+
+            return Ok(atividades);
+        }
+
+        // GET /api/atividades/minhas-compras/{compradorId} — Atividades compradas pelo usuário
+        [HttpGet("minhas-compras/{compradorId}")]
+        public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasCompras(int compradorId, [FromQuery] string? status)
+        {
+            var query = _context.Atividades
+                .Where(a => a.CompradorId == compradorId)
+                .Include(a => a.Ofertante)
+                .Include(a => a.Comprador)
+                .Include(a => a.Disciplina)
+                .Include(a => a.Anexos)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                var statusList = status.Split(',').Select(int.Parse).ToList();
+                query = query.Where(a => statusList.Contains((int)a.Status));
+            }
+
+            var atividades = await query.ToListAsync();
 
             return Ok(atividades);
         }
@@ -251,6 +282,115 @@ namespace BancoTempo.Api.Controllers
             atividade.CustoHoras = dto.CustoHoras;
             atividade.Status = StatusAtividade.PendentePosCorrecao;
             
+            await _context.SaveChangesAsync();
+
+            return Ok(atividade);
+        }
+
+        // POST /api/atividades/{id}/comprar
+        [HttpPost("{id}/comprar")]
+        public async Task<IActionResult> ComprarAtividade(int id, [FromBody] DTOs.ComprarAtividadeDto dto)
+        {
+            var atividade = await _context.Atividades.FindAsync(id);
+            if (atividade == null)
+            {
+                return NotFound();
+            }
+
+            if (atividade.Status != StatusAtividade.Aprovada)
+            {
+                return BadRequest("Apenas atividades com status 'Aprovada' podem ser compradas.");
+            }
+
+            var comprador = await _context.Usuarios.FindAsync(dto.CompradorId);
+            if (comprador == null)
+            {
+                return NotFound("Comprador não encontrado.");
+            }
+
+            if (comprador.SaldoHoras < atividade.CustoHoras)
+            {
+                return BadRequest("Saldo insuficiente.");
+            }
+
+            // Débito imediato
+            comprador.SaldoHoras -= atividade.CustoHoras;
+
+            // Vincula o comprador e altera o status
+            atividade.CompradorId = comprador.Id;
+            atividade.Status = StatusAtividade.EmExecucao;
+
+            // Cria instância de Chat Privado
+            var chat = new ChatPrivado
+            {
+                AtividadeId = atividade.Id,
+                DataCriacao = DateTime.UtcNow
+            };
+            _context.Chats.Add(chat);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Mensagem = "Compra realizada com sucesso", Atividade = atividade, ChatId = chat.Id });
+        }
+
+        // PUT /api/atividades/{id}/moderacao-final
+        [HttpPut("{id}/moderacao-final")]
+        public async Task<IActionResult> ModeracaoFinal(int id, [FromBody] DTOs.ModeracaoFinalDto dto)
+        {
+            var atividade = await _context.Atividades
+                .Include(a => a.Ofertante)
+                .Include(a => a.Comprador)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (atividade == null)
+            {
+                return NotFound();
+            }
+
+            if (atividade.Status != StatusAtividade.AguardandoValidacao)
+            {
+                return BadRequest("A atividade não está aguardando validação.");
+            }
+
+            // Verifica se já passou por revisão antes (se existe feedback prévio) para a Regra de Rodada Final
+            bool jaPassouPorRevisao = !string.IsNullOrEmpty(atividade.FeedbackModeracao);
+
+            if (dto.Acao.Equals("Validar", StringComparison.OrdinalIgnoreCase))
+            {
+                atividade.Status = StatusAtividade.Validada;
+                if (atividade.Ofertante != null)
+                {
+                    atividade.Ofertante.SaldoHoras += atividade.CustoHoras;
+                }
+            }
+            else if (dto.Acao.Equals("Invalidar", StringComparison.OrdinalIgnoreCase))
+            {
+                atividade.Status = StatusAtividade.Invalida;
+                if (atividade.Comprador != null)
+                {
+                    atividade.Comprador.SaldoHoras += atividade.CustoHoras; // Estorno
+                }
+            }
+            else if (dto.Acao.Equals("NecessitaRevisao", StringComparison.OrdinalIgnoreCase))
+            {
+                if (jaPassouPorRevisao)
+                {
+                    return BadRequest("Ação inválida. Esta atividade já passou por revisão e agora só pode ser Validada ou Invalidada.");
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Feedback))
+                {
+                    return BadRequest("É obrigatório fornecer um feedback ao solicitar revisão.");
+                }
+
+                atividade.Status = StatusAtividade.NecessitaRevisao;
+                atividade.FeedbackModeracao = dto.Feedback;
+            }
+            else
+            {
+                return BadRequest("Ação desconhecida. Use: Validar, Invalidar ou NecessitaRevisao.");
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(atividade);

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos } from '../../services/atividadeService';
+import { getAtividade, getAnexos, comprarAtividade } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
-import { ArrowLeft, Clock, BookOpen, User, Paperclip, Download, Calendar } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { ArrowLeft, Clock, BookOpen, User, Paperclip, Download, Calendar, ShoppingCart } from 'lucide-react';
 
 const getStatusBadge = (status) => {
     switch (status) {
@@ -21,7 +22,9 @@ const AtividadeDetalhesPage = () => {
     const [atividade, setAtividade] = useState(null);
     const [anexos, setAnexos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingCompra, setLoadingCompra] = useState(false);
     const toast = useToast();
+    const { user, updateUser } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -41,6 +44,25 @@ const AtividadeDetalhesPage = () => {
         fetchData();
     }, [id]);
 
+    const handleComprar = async () => {
+        if (user.saldoHoras < atividade.custoHoras) {
+            toast.error('Você não possui saldo de horas suficiente para comprar esta atividade.');
+            return;
+        }
+
+        setLoadingCompra(true);
+        try {
+            await comprarAtividade(atividade.id, user.id);
+            toast.success('Atividade comprada com sucesso!');
+            updateUser({ saldoHoras: user.saldoHoras - atividade.custoHoras });
+            navigate(`/chat/${atividade.id}`);
+        } catch (error) {
+            const msg = error.response?.data?.mensagem || 'Erro ao efetuar a compra da atividade.';
+            toast.error(msg);
+            setLoadingCompra(false);
+        }
+    };
+
     if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
     if (!atividade) return <div className="text-center mt-20 text-gray-500">Atividade não encontrada.</div>;
 
@@ -55,7 +77,23 @@ const AtividadeDetalhesPage = () => {
                 <div className="p-6 border-b border-gray-100">
                     <div className="flex items-start justify-between">
                         <h1 className="text-2xl font-bold text-gray-900">{atividade.titulo}</h1>
-                        {getStatusBadge(atividade.status)}
+                        <div className="flex flex-col items-end gap-2">
+                            {getStatusBadge(atividade.status)}
+                            {atividade.status === 2 && user && user.id !== atividade.ofertanteId && (
+                                <button
+                                    onClick={handleComprar}
+                                    disabled={loadingCompra}
+                                    className="mt-2 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-70 transition-colors shadow-sm"
+                                >
+                                    {loadingCompra ? (
+                                        <div className="w-4 h-4 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <ShoppingCart className="w-4 h-4 mr-2" />
+                                    )}
+                                    Comprar Atividade
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">

@@ -8,6 +8,10 @@ public class AnexoAtividade
     public required string TipoMime { get; set; } // Ex: "application/pdf", "image/png"
     public long TamanhoBytes { get; set; }
 
+    // Identifica quem fez o upload (Comprador ou Ofertante) para validação do sistema de comprovação
+    public int? EnviadoPorId { get; set; }
+    public Usuario? EnviadoPor { get; set; }
+
     // FK para Atividade
     public int AtividadeId { get; set; }
     public Atividade? Atividade { get; set; }

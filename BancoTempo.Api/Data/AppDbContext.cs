@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Atividade> Atividades { get; set; }
     public DbSet<AnexoAtividade> AnexosAtividades { get; set; }
+    public DbSet<ChatPrivado> Chats { get; set; }
+    public DbSet<MensagemChat> Mensagens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,5 +63,26 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Usuario>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        // 8. AnexoAtividade -> EnviadoPor
+        modelBuilder.Entity<AnexoAtividade>()
+            .HasOne(an => an.EnviadoPor)
+            .WithMany()
+            .HasForeignKey(an => an.EnviadoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // 9. ChatPrivado -> Atividade
+        modelBuilder.Entity<ChatPrivado>()
+            .HasOne(c => c.Atividade)
+            .WithOne()
+            .HasForeignKey<ChatPrivado>(c => c.AtividadeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 10. MensagemChat -> Remetente
+        modelBuilder.Entity<MensagemChat>()
+            .HasOne(m => m.Remetente)
+            .WithMany()
+            .HasForeignKey(m => m.RemetenteId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

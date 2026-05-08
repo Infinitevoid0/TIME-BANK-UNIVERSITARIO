@@ -41,7 +41,7 @@ namespace BancoTempo.Api.Controllers
 
         // POST /api/anexos/{atividadeId} — Upload de arquivo
         [HttpPost("{atividadeId}")]
-        public async Task<ActionResult<AnexoAtividade>> PostAnexo(int atividadeId, IFormFile arquivo)
+        public async Task<ActionResult<AnexoAtividade>> PostAnexo(int atividadeId, [FromForm] int? enviadoPorId, IFormFile arquivo)
         {
             var atividade = await _context.Atividades.FindAsync(atividadeId);
             if (atividade == null)
@@ -99,11 +99,28 @@ namespace BancoTempo.Api.Controllers
                 CaminhoArquivo = caminhoRelativo,
                 TipoMime = arquivo.ContentType,
                 TamanhoBytes = arquivo.Length,
-                AtividadeId = atividadeId
+                AtividadeId = atividadeId,
+                EnviadoPorId = enviadoPorId
             };
 
             _context.AnexosAtividades.Add(anexo);
             await _context.SaveChangesAsync();
+
+            // Verificação de Mudança de Status (Workflow de Execução)
+            if (atividade.Status == StatusAtividade.EmExecucao || atividade.Status == StatusAtividade.NecessitaRevisao)
+            {
+                bool ofertanteEnviou = await _context.AnexosAtividades
+                    .AnyAsync(a => a.AtividadeId == atividadeId && a.EnviadoPorId == atividade.OfertanteId);
+                
+                bool compradorEnviou = await _context.AnexosAtividades
+                    .AnyAsync(a => a.AtividadeId == atividadeId && a.EnviadoPorId == atividade.CompradorId);
+
+                if (ofertanteEnviou && compradorEnviou)
+                {
+                    atividade.Status = StatusAtividade.AguardandoValidacao;
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             return CreatedAtAction("GetAnexos", new { atividadeId = atividadeId }, anexo);
         }
