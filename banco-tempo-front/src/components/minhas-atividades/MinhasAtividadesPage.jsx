@@ -11,14 +11,11 @@ const getStatusBadge = (status) => {
     switch (status) {
         case 1: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendente Inicial</span>;
         case 2: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aprovada</span>;
-        case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Recusada</span>;
-        case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
-        case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendente (Corrigida)</span>;
-        case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Execução</span>;
-        case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Aguardando Validação</span>;
-        case 8: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Revisão (Comp.)</span>;
-        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Validada</span>;
-        case 10: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inválida</span>;
+        case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Andamento</span>;
+        case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Concluída</span>;
+        case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Recusada</span>;
+        case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
+        case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Pendente (Corrigida)</span>;
         default: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Desconhecido</span>;
     }
 };
@@ -108,7 +105,7 @@ const MinhasAtividadesPage = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex items-center justify-end gap-3">
                                         {/* Botão de Corrigir Oferta Inicial */}
-                                        {atividade.status === 4 && tipo === 'ofertas' && (
+                                        {atividade.status === 6 && tipo === 'ofertas' && (
                                             <div className="flex items-center gap-2">
                                                 <div className="relative group cursor-pointer text-orange-500 hover:text-orange-700">
                                                     <Info className="w-4 h-4" />
@@ -127,7 +124,7 @@ const MinhasAtividadesPage = () => {
                                         )}
 
                                         {/* Botão Acessar Chat / Comprovantes (Fase Transação) */}
-                                        {(atividade.status >= 6 && atividade.status <= 10) && (
+                                        {(atividade.status === 3 || atividade.status === 4) && (
                                             <button
                                                 onClick={() => navigate(`/chat/${atividade.id}`)}
                                                 className="inline-flex items-center text-blue-600 hover:text-blue-900 transition-colors"

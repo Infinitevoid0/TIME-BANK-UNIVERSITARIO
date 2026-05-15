@@ -12,6 +12,8 @@ const getStatusBadge = (status) => {
         case 3: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">Em Andamento</span>;
         case 4: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">Concluída</span>;
         case 5: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">Recusada</span>;
+        case 6: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
+        case 7: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">Pendente (Corrigida)</span>;
         default: return null;
     }
 };
