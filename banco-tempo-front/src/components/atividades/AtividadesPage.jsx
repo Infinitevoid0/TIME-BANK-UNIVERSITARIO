@@ -9,7 +9,7 @@ import { Plus, Search, Clock, BookOpen, AlertCircle, Eye, Filter, ToggleLeft, To
 
 const stripHtml = (html) => {
     if (!html) return '';
-    return html.replace(/<[^>]*>/g, '');
+    return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, '');
 };
 
 const truncate = (text, max = 100) => {
@@ -21,9 +21,14 @@ const getStatusBadge = (status) => {
     switch (status) {
         case 1: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendente</span>;
         case 2: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Aprovada</span>;
-        case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Andamento</span>;
-        case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Concluída</span>;
-        case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Recusada</span>;
+        case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Recusada</span>;
+        case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
+        case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Pendente (Corrigida)</span>;
+        case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Execução</span>;
+        case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Aguardando Validação</span>;
+        case 8: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Revisão</span>;
+        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Validada</span>;
+        case 10: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inválida</span>;
         default: return null;
     }
 };
@@ -83,9 +88,9 @@ const AtividadesPage = () => {
         setFilterDisciplina('');
     };
 
-    // Mural geral: mostra apenas aprovadas, em andamento e concluídas + filtros
+    // Mural geral: mostra atividades aprovadas ou em transação (2, 6, 7, 8, 9)
     const filteredAtividades = atividades.filter(a => {
-        if (a.status !== 2 && a.status !== 3 && a.status !== 4) return false;
+        if (![2, 6, 7, 8, 9].includes(a.status)) return false;
         if (searchTerm && !a.titulo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
         if (filterCurso && (!a.disciplina || a.disciplina.cursoId !== parseInt(filterCurso, 10))) return false;
         if (filterDisciplina && a.disciplinaId !== parseInt(filterDisciplina, 10)) return false;

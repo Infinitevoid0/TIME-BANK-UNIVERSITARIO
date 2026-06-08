@@ -31,9 +31,9 @@ const ModeracaoPage = () => {
 
     const pendentes = atividades.filter(a => {
         if (mostrarApenasCorrigidas) {
-            return a.status === 7;
+            return a.status === 5;
         }
-        return a.status === 1 || a.status === 7;
+        return a.status === 1 || a.status === 5;
     });
 
     const handleRemoveLocal = (idAtividade) => {
@@ -111,7 +111,7 @@ const ModeracaoPage = () => {
                                 <td className="px-6 py-4">
                                     <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                                         {atividade.titulo}
-                                        {atividade.status === 7 && (
+                                        {atividade.status === 5 && (
                                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                                 Corrigida
                                             </span>
