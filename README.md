@@ -114,4 +114,4 @@ Visando facilitar o desenvolvimento, a verificação de interfaces e as rotas pr
   * Senha: `admin123`
 
 ***
-Documentação concebida com excelência técnica para orientar programadores, professores e avaliadores sobre os rigorosos padrões de arquitetura, fluxos de estado e regras de negócio que fundamentam todo o ecossistema do TIME-BANK-UNIVERSITÁRIO.
+*Documentação concebida para orientar programadores, professores e avaliadores sobre os padrões de arquitetura, fluxos de estado e regras de negócio que fundamentam todo o ecossistema do TIME-BANK-UNIVERSITÁRIO.*
