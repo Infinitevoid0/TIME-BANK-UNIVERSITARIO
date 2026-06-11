@@ -25,6 +25,7 @@ namespace BancoTempo.Api.Controllers
             [FromQuery] int? custoMaximo)
         {
             var query = _context.Atividades
+                .Where(a => a.Status == StatusAtividade.Aprovada)
                 .Include(a => a.Ofertante)
                 .Include(a => a.Comprador)
                 .Include(a => a.Disciplina)
