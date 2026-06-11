@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { LogIn } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -37,14 +37,14 @@ const LoginPage = () => {
             <div className="bg-white p-8 rounded-2xl shadow-xl space-y-8 max-w-md w-full border border-gray-100">
                 <div className="text-center">
                     <div className="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
-                        <LogIn className="w-6 h-6" />
+                        <Clock className="w-6 h-6" />
                     </div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                        Acesse sua conta
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-600">
+                    <p className="text-sm text-gray-600">
                         Bem-vindo ao Banco de Tempo UFSC
                     </p>
+                    <h2 className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
+                        Acesse sua conta
+                    </h2>
                 </div>
                 
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
