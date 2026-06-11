@@ -5,7 +5,7 @@ import api from '../../services/api';
 import AtividadeFormModal from '../atividades/AtividadeFormModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { ClipboardList, Clock, Eye, AlertCircle, Edit2, Info, MessageSquare, Tag, ShoppingBag } from 'lucide-react';
+import { ClipboardList, Clock, Eye, AlertCircle, Edit2, Info, MessageSquare, Tag, ShoppingBag, BadgeCheck } from 'lucide-react';
 
 const getStatusBadge = (status) => {
     switch (status) {
@@ -17,7 +17,7 @@ const getStatusBadge = (status) => {
         case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Execução</span>;
         case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Aguardando Validação</span>;
         case 8: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Revisão (Comp.)</span>;
-        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Validada</span>;
+        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white shadow-sm">Validada</span>;
         case 10: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inválida</span>;
         default: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Desconhecido</span>;
     }
@@ -29,6 +29,7 @@ const MinhasAtividadesPage = () => {
     const [disciplinas, setDisciplinas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('ofertas'); // 'ofertas' | 'compras'
+    const [orderBy, setOrderBy] = useState('recentes');
     
     const [modalOpen, setModalOpen] = useState(false);
     const [atividadeCorrigir, setAtividadeCorrigir] = useState(null);
@@ -69,7 +70,23 @@ const MinhasAtividadesPage = () => {
         toast.success("Atividade corrigida com sucesso!");
     };
 
-    const renderTable = (lista, tipo) => {
+    const sortActivities = (activities) => {
+        const sorted = [...activities];
+        switch (orderBy) {
+            case 'custo_asc':
+                return sorted.sort((a, b) => a.custoHoras - b.custoHoras);
+            case 'custo_desc':
+                return sorted.sort((a, b) => b.custoHoras - a.custoHoras);
+            case 'status':
+                return sorted.sort((a, b) => a.status - b.status);
+            case 'recentes':
+            default:
+                return sorted.sort((a, b) => b.id - a.id);
+        }
+    };
+
+    const renderTable = (listaBruta, tipo) => {
+        const lista = sortActivities(listaBruta);
         if (lista.length === 0) {
             return (
                 <div className="py-12 text-center text-gray-500 bg-white rounded-b-xl border-x border-b border-gray-200">
@@ -94,7 +111,10 @@ const MinhasAtividadesPage = () => {
                         {lista.map((atividade) => (
                             <tr key={atividade.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {atividade.titulo}
+                                    <div className="flex items-center gap-1.5">
+                                        {atividade.titulo}
+                                        {atividade.status === 9 && <BadgeCheck className="w-4 h-4 text-emerald-500" />}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center text-sm text-gray-900">
@@ -166,7 +186,7 @@ const MinhasAtividadesPage = () => {
 
             {/* Abas */}
             <div>
-                <div className="border-b border-gray-200">
+                <div className="border-b border-gray-200 flex justify-between items-end mb-6">
                     <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                         <button
                             onClick={() => setActiveTab('ofertas')}
@@ -198,6 +218,19 @@ const MinhasAtividadesPage = () => {
                             </span>
                         </button>
                     </nav>
+
+                    <div className="pb-2">
+                        <select
+                            value={orderBy}
+                            onChange={(e) => setOrderBy(e.target.value)}
+                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-colors"
+                        >
+                            <option value="recentes">Mais Recentes</option>
+                            <option value="custo_asc">Menor Custo</option>
+                            <option value="custo_desc">Maior Custo</option>
+                            <option value="status">Por Status</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Conteúdo da Aba */}

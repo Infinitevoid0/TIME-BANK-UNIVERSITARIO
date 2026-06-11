@@ -5,7 +5,7 @@ import api from '../../services/api';
 import AtividadeFormModal from './AtividadeFormModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { Plus, Search, Clock, BookOpen, AlertCircle, Eye, Filter, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Search, Clock, BookOpen, AlertCircle, Eye, Filter, ToggleLeft, ToggleRight, BadgeCheck } from 'lucide-react';
 
 const stripHtml = (html) => {
     if (!html) return '';
@@ -27,7 +27,7 @@ const getStatusBadge = (status) => {
         case 6: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Em Execução</span>;
         case 7: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Aguardando Validação</span>;
         case 8: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Necessita Revisão</span>;
-        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Validada</span>;
+        case 9: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-600 text-white shadow-sm">Validada</span>;
         case 10: return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inválida</span>;
         default: return null;
     }
@@ -203,7 +203,10 @@ const AtividadesPage = () => {
                                 <tr key={atividade.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-gray-900">{atividade.titulo}</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm font-medium text-gray-900">{atividade.titulo}</span>
+                                                {atividade.status === 9 && <BadgeCheck className="w-4 h-4 text-emerald-500" />}
+                                            </div>
                                             <span className="text-xs text-gray-500 mt-0.5">
                                                 {truncate(stripHtml(atividade.descricao))}
                                             </span>
