@@ -83,6 +83,11 @@ export const corrigirAtividade = async (id, atividade) => {
     return response.data;
 };
 
+export const deleteAtividade = async (id, userId) => {
+    const response = await api.delete(`/atividades/${id}?userId=${userId}`);
+    return response.data;
+};
+
 export const moderacaoFinal = async (id, acao, feedback) => {
     const response = await api.put(`/atividades/${id}/moderacao-final`, { acao, feedback });
     return response.data;

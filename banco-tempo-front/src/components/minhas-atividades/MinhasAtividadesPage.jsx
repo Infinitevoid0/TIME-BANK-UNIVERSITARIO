@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getMinhasOfertas, getMinhasCompras } from '../../services/atividadeService';
+import { getMinhasOfertas, getMinhasCompras, deleteAtividade } from '../../services/atividadeService';
 import api from '../../services/api';
 import AtividadeFormModal from '../atividades/AtividadeFormModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { ClipboardList, Clock, Eye, AlertCircle, Edit2, Info, MessageSquare, Tag, ShoppingBag, BadgeCheck } from 'lucide-react';
+import { ClipboardList, Clock, Eye, AlertCircle, Edit2, Info, MessageSquare, Tag, ShoppingBag, BadgeCheck, Trash2 } from 'lucide-react';
 
 const getStatusBadge = (status) => {
     switch (status) {
@@ -68,6 +68,20 @@ const MinhasAtividadesPage = () => {
         setModalOpen(false);
         setAtividadeCorrigir(null);
         toast.success("Atividade corrigida com sucesso!");
+    };
+
+    const handleDelete = async (atividade) => {
+        if (!window.confirm(`Tem certeza que deseja excluir a atividade "${atividade.titulo}"? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+        try {
+            await deleteAtividade(atividade.id, user.id);
+            setOfertas(prev => prev.filter(a => a.id !== atividade.id));
+            toast.success('Atividade excluída com sucesso!');
+        } catch (error) {
+            const msg = error.response?.data || 'Erro ao excluir atividade.';
+            toast.error(typeof msg === 'string' ? msg : 'Erro ao excluir atividade.');
+        }
     };
 
     const sortActivities = (activities) => {
@@ -162,6 +176,17 @@ const MinhasAtividadesPage = () => {
                                             <Eye className="w-4 h-4 mr-1" />
                                             Detalhes
                                         </Link>
+
+                                        {/* Botão Excluir (apenas para atividades recusadas e na aba ofertas) */}
+                                        {atividade.status === 3 && tipo === 'ofertas' && (
+                                            <button
+                                                onClick={() => handleDelete(atividade)}
+                                                className="inline-flex items-center text-red-500 hover:text-red-700 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-1" />
+                                                Excluir
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

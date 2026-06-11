@@ -145,9 +145,9 @@ namespace BancoTempo.Api.Controllers
                 return BadRequest("O título deve ter no máximo 120 caracteres.");
             }
 
-            if (dto.Descricao != null && dto.Descricao.Length > 5000)
+            if (dto.Descricao != null && dto.Descricao.Length > 15000)
             {
-                return BadRequest("A descrição deve ter no máximo 5000 caracteres.");
+                return BadRequest("A descrição é muito longa (limite técnico excedido).");
             }
 
             var atividade = new Atividade
@@ -288,9 +288,9 @@ namespace BancoTempo.Api.Controllers
                 return BadRequest("O título deve ter no máximo 120 caracteres.");
             }
 
-            if (dto.Descricao != null && dto.Descricao.Length > 5000)
+            if (dto.Descricao != null && dto.Descricao.Length > 15000)
             {
-                return BadRequest("A descrição deve ter no máximo 5000 caracteres.");
+                return BadRequest("A descrição é muito longa (limite técnico excedido).");
             }
 
             atividade.Titulo = dto.Titulo;
@@ -412,13 +412,25 @@ namespace BancoTempo.Api.Controllers
             return Ok(atividade);
         }
 
+        // DELETE /api/atividades/{id}?userId={userId}
+        // Apenas o ofertante pode excluir, e somente quando a atividade foi Recusada (3).
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAtividade(int id)
+        public async Task<IActionResult> DeleteAtividade(int id, [FromQuery] int userId)
         {
             var atividade = await _context.Atividades.FindAsync(id);
             if (atividade == null)
             {
                 return NotFound();
+            }
+
+            if (atividade.OfertanteId != userId)
+            {
+                return BadRequest("Você só pode excluir suas próprias atividades.");
+            }
+
+            if (atividade.Status != StatusAtividade.Recusada)
+            {
+                return BadRequest("Apenas atividades com status 'Recusada' podem ser excluídas.");
             }
 
             _context.Atividades.Remove(atividade);

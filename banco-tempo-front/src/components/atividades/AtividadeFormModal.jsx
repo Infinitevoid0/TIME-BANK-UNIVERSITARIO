@@ -21,12 +21,12 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
     });
     const [arquivos, setArquivos] = useState([]);
     const [loading, setLoading] = useState(false);
+    // Recebe o comprimento real do texto do Quill via callback (mesma fonte do contador)
+    const [descricaoLength, setDescricaoLength] = useState(0);
     const toast = useToast();
 
-    // A API e o Banco de Dados limitam a string (com HTML) a 5000 caracteres.
-    // Ignorar tags vazias iniciais para a validação real.
+    // Detecta se descricao está vazia para validação
     const isDescricaoEmpty = !formData.descricao || formData.descricao === '<p><br></p>' || formData.descricao === '<p></p>';
-    const descricaoRealLength = isDescricaoEmpty ? 0 : formData.descricao.length;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -35,12 +35,12 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
             toast.error(`O título deve ter no máximo ${TITULO_MAX} caracteres.`);
             return;
         }
-        if (descricaoRealLength === 0) {
+        if (isDescricaoEmpty || descricaoLength === 0) {
             toast.error('A descrição da atividade é obrigatória.');
             return;
         }
-        if (descricaoRealLength > DESCRICAO_MAX) {
-            toast.error(`A descrição (incluindo formatação) deve ter no máximo ${DESCRICAO_MAX} caracteres.`);
+        if (descricaoLength > DESCRICAO_MAX) {
+            toast.error(`A descrição deve ter no máximo ${DESCRICAO_MAX} caracteres.`);
             return;
         }
 
@@ -180,6 +180,7 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                     <RichTextEditor
                         value={formData.descricao}
                         onChange={(value) => setFormData(prev => ({ ...prev, descricao: value }))}
+                        onLengthChange={setDescricaoLength}
                         maxLength={DESCRICAO_MAX}
                         placeholder="Descreva os detalhes do serviço oferecido..."
                     />

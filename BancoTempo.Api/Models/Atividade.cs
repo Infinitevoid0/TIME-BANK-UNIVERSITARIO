@@ -10,7 +10,8 @@ public class Atividade
     public required string Titulo { get; set; }
 
     // Armazenada em formato HTML (rich text do frontend).
-    [MaxLength(5000, ErrorMessage = "A descrição deve ter no máximo 5000 caracteres.")]
+    // Limite maior que o exibido (5000 chars visíveis) pois as tags HTML do editor ocupam espaço extra.
+    [MaxLength(15000, ErrorMessage = "A descrição é muito longa.")]
     public required string Descricao { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "A atividade deve valer no mínimo 1 hora.")]
