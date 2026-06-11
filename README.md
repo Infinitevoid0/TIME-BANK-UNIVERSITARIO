@@ -1,5 +1,14 @@
 # TIME-BANK-UNIVERSITÁRIO
 
+## Índice
+- [Visão Geral do Projeto](#visão-geral-do-projeto)
+- [Detalhamento das Funcionalidades](#detalhamento-das-funcionalidades)
+- [Ciclo de Vida de uma Transação](#ciclo-de-vida-de-uma-transação)
+- [Arquitetura do Sistema](#arquitetura-do-sistema)
+- [Perfis de Acesso e Permissões](#perfis-de-acesso-e-permissões)
+- [Guia Completo de Instalação e Execução](#guia-completo-de-instalação-e-execução)
+- [Massa de Dados para Testes Funcionais (Seed)](#massa-de-dados-para-testes-funcionais-seed)
+
 ## Visão Geral do Projeto
 O TIME-BANK-UNIVERSITÁRIO é uma plataforma de economia solidária projetada exclusivamente para o ambiente acadêmico, baseada na troca colaborativa de tempo e habilidades. O sistema permite que estudantes universitários ofertem serviços ou auxílio educacional (como tutorias, revisões de artigos acadêmicos, desenvolvimento de software e formatação de trabalhos) e recebam horas de crédito. Essas horas acumuladas funcionam como uma moeda virtual, que pode ser utilizada para adquirir serviços ofertados por outros membros da comunidade universitária.
 
