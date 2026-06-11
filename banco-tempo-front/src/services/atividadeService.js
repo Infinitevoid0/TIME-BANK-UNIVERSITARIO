@@ -5,6 +5,11 @@ export const getAtividades = async () => {
     return response.data;
 };
 
+export const getAtividadesPendentes = async () => {
+    const response = await api.get('/atividades/pendentes');
+    return response.data;
+};
+
 export const getAtividade = async (id) => {
     const response = await api.get(`/atividades/${id}`);
     return response.data;

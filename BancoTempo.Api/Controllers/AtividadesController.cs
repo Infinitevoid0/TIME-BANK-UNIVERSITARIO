@@ -71,6 +71,21 @@ namespace BancoTempo.Api.Controllers
             return atividade;
         }
 
+        // GET /api/atividades/pendentes — Atividades pendentes de moderação (status Pendente e PendentePosCorrecao)
+        [HttpGet("pendentes")]
+        public async Task<ActionResult<IEnumerable<Atividade>>> GetAtividadesPendentes()
+        {
+            var atividades = await _context.Atividades
+                .Where(a => a.Status == StatusAtividade.Pendente || a.Status == StatusAtividade.PendentePosCorrecao)
+                .Include(a => a.Ofertante)
+                .Include(a => a.Disciplina)
+                .Include(a => a.Anexos)
+                .OrderByDescending(a => a.DataCriacao)
+                .ToListAsync();
+
+            return Ok(atividades);
+        }
+
         // GET /api/atividades/minhas/{ofertanteId} — Atividades ofertadas pelo usuário
         [HttpGet("minhas/{ofertanteId}")]
         public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasAtividades(int ofertanteId, [FromQuery] string? status)

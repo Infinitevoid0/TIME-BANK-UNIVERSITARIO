@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAtividades, reprovarAtividade } from '../../services/atividadeService';
+import { getAtividadesPendentes, reprovarAtividade } from '../../services/atividadeService';
 import ModeracaoPreviewModal from './ModeracaoPreviewModal';
 import { useToast } from '../../hooks/useToast';
 import { ShieldAlert, CheckCircle, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -20,7 +20,7 @@ const ModeracaoPage = () => {
 
     const carregarDados = async () => {
         try {
-            const data = await getAtividades();
+            const data = await getAtividadesPendentes();
             setAtividades(data);
         } catch (error) {
             toast.error('Erro ao buscar as atividades.');
