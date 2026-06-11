@@ -51,7 +51,7 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
             toast.success("Comprovante enviado com sucesso!");
             await fetchAnexos();
             if (onUploadSuccess) onUploadSuccess();
-        } catch (error) {
+        } catch {
             toast.error("Erro ao enviar o comprovante.");
         } finally {
             setUploading(false);
@@ -164,7 +164,9 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
                                     {anexo.nomeArquivo}
                                 </a>
                                 <span className="text-gray-400 mt-1">
-                                    Enviado por: {anexo.enviadoPorId != null && anexo.enviadoPorId === ofertanteId ? 'Ofertante' : (anexo.enviadoPorId != null && anexo.enviadoPorId === compradorId ? 'Comprador' : 'Anexo da Oferta')}
+                                    {anexo.enviadoPorId == null 
+                                        ? 'Enviado no cadastro da oferta' 
+                                        : `Enviado por: ${anexo.enviadoPorId === ofertanteId ? 'Ofertante' : 'Comprador'}`}
                                 </span>
                             </li>
                         ))}

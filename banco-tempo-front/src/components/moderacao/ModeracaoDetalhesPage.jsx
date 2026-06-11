@@ -56,9 +56,9 @@ const ModeracaoDetalhesPage = () => {
             toast.success('Atividade reprovada.');
             navigate('/moderacao');
         } catch (error) {
-            const errData2 = error.response?.data;
-            const msg2 = typeof errData2 === 'string' ? errData2 : (errData2?.mensagem || errData2?.title || 'Erro ao reprovar atividade.');
-            toast.error(msg2);
+            const errData = error.response?.data;
+            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao reprovar atividade.');
+            toast.error(msg);
         } finally {
             setActionLoading(false);
         }
@@ -76,9 +76,9 @@ const ModeracaoDetalhesPage = () => {
             toast.success("Correção solicitada com sucesso. O aluno foi notificado.");
             navigate('/moderacao');
         } catch (error) {
-            const errData3 = error.response?.data;
-            const msg3 = typeof errData3 === 'string' ? errData3 : (errData3?.mensagem || errData3?.title || 'Erro ao solicitar correção.');
-            toast.error(msg3);
+            const errData = error.response?.data;
+            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao solicitar correção.');
+            toast.error(msg);
         } finally {
             setActionLoading(false);
             setShowCorrecaoModal(false);

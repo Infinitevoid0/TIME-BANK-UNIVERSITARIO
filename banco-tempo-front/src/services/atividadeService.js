@@ -10,11 +10,6 @@ export const getAtividade = async (id) => {
     return response.data;
 };
 
-export const getMinhasAtividades = async (ofertanteId) => {
-    const response = await api.get(`/atividades/minhas/${ofertanteId}`);
-    return response.data;
-};
-
 export const getMinhasOfertas = async (userId) => {
     const response = await api.get(`/atividades/minhas/${userId}`);
     return response.data;
