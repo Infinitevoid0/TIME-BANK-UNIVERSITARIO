@@ -77,8 +77,67 @@ O controle de acesso é dividido em três camadas institucionais:
 * **Moderador:** Possui todas as permissões de Aluno, além do acesso ao painel de Moderação. É responsável por aprovar atividades, verificar comprovantes e autorizar transferências de créditos. O Moderador não pode rebaixar o próprio cargo.
 * **Administrador:** Nível de controle total. Além das permissões de moderação, possui acesso irrestrito para alterar dados fundamentais de qualquer usuário do banco de dados, incluindo a edição direta de saldos de horas para correções sistêmicas.
 
-## Guia Completo de Instalação e Execução
-Para rodar o projeto em sua máquina local de forma satisfatória, siga rigorosamente os passos abaixo.
+## Execução com Docker (Recomendado / Running with Docker)
+
+A maneira mais rápida e prática de subir todo o ecossistema (Banco de Dados PostgreSQL, API .NET 8 e Frontend React/Nginx) é utilizando o **Docker Compose**.
+
+### Pré-requisitos
+* **Docker** (versão 20.10+) instalado.
+* **Docker Compose** (ou `docker compose` integrado ao Docker Desktop / CLI).
+
+### Passo a Passo
+
+1. **Clonar o repositório e acessar a raiz do projeto:**
+   ```bash
+   git clone <URL_DO_REPOSITORIO>
+   cd dozerotimebank
+   ```
+
+2. **Iniciar todos os serviços com um único comando:**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Acessar as Aplicações:**
+   * **Frontend (React + Nginx):** [http://localhost:5173](http://localhost:5173)
+   * **Backend API (Swagger UI):** [http://localhost:5067/swagger](http://localhost:5067/swagger)
+   * **Banco de Dados PostgreSQL:** `localhost:5432` (Usuário: `postgres`, Senha: `postgrespassword`, DB: `timebank`)
+
+### Execução de Migrações do Entity Framework Core
+
+* **Execução Automática:** A API containerizada executa automaticamente `db.Database.Migrate()` durante a sua inicialização. Portanto, as tabelas e as migrações pendentes são aplicadas de forma autônoma na subida do container.
+* **Execução Manual (opcional):** Caso precise gerar ou aplicar novas migrações via linha de comando localmente com a ferramenta CLI do Entity Framework Core:
+  ```bash
+  # Criar uma nova migration no Backend
+  dotnet ef migrations add NomeDaMigration --project BancoTempo.Api
+
+  # Aplicar as migrações manualmente ao banco PostgreSQL containerizado
+  dotnet ef database update --project BancoTempo.Api --connection "Host=localhost;Port=5432;Database=timebank;Username=postgres;Password=postgrespassword"
+  ```
+
+### Comandos Úteis do Docker
+
+* **Visualizar logs em tempo real:**
+  ```bash
+  docker-compose logs -f
+  ```
+* **Verificar o status dos containers:**
+  ```bash
+  docker-compose ps
+  ```
+* **Parar a execução dos serviços:**
+  ```bash
+  docker-compose down
+  ```
+* **Parar e remover volumes de dados (reset completo do banco de dados):**
+  ```bash
+  docker-compose down -v
+  ```
+
+---
+
+## Guia Completo de Instalação e Execução Manual (Sem Docker)
+Para rodar o projeto em sua máquina local sem containers, siga rigorosamente os passos abaixo.
 
 ### Pré-requisitos
 Certifique que seu ambiente de desenvolvimento possui as seguintes ferramentas:

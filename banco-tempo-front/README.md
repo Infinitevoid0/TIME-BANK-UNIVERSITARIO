@@ -1,16 +1,65 @@
-# React + Vite
+# Banco de Tempo Universitário - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este diretório contém a aplicação web frontend do **Banco de Tempo Universitário**, desenvolvida em React utilizando Vite e Tailwind CSS v4.
 
-Currently, two official plugins are available:
+## Tech Stack
+* **React 19**
+* **Vite** (Build Tool & HMR)
+* **Tailwind CSS v4** (Estilização)
+* **Axios** (Comunicação HTTP com a API RESTful)
+* **React Router DOM** (Navegação SPA)
+* **Lucide React** (Ícones)
+* **Nginx** (Servidor de arquivos estáticos em produção/Docker)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Execução com Docker (Running with Docker)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Via Docker Compose (Recomendado na raiz do projeto)
+Para iniciar a aplicação frontend junto com o backend e o banco de dados PostgreSQL, execute na raiz do repositório:
 
-## Expanding the ESLint configuration
+```bash
+docker-compose up -d --build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+O frontend estará disponível em: **`http://localhost:5173`**.
+
+### 2. Execução isolada via Dockerfile
+Se desejar construir e rodar apenas a imagem Docker do frontend isoladamente:
+
+```bash
+# Construir a imagem Docker
+docker build -t banco-tempo-frontend .
+
+# Rodar o container na porta 5173
+docker run -d -p 5173:80 --name frontend-app banco-tempo-frontend
+```
+
+---
+
+## Execução em Desenvolvimento Local (Sem Docker)
+
+### Pré-requisitos
+* Node.js v18+ instalado.
+* NPM instalado.
+
+### Passo a Passo
+
+1. **Instalar as dependências:**
+   ```bash
+   npm install
+   ```
+
+2. **Iniciar o servidor de desenvolvimento Vite:**
+   ```bash
+   npm run dev
+   ```
+
+3. Acessar `http://localhost:5173` no seu navegador.
+
+### Gerar Build de Produção
+Para compilar os arquivos estáticos otimizados para produção:
+```bash
+npm run build
+```
+Os arquivos gerados ficarão na pasta `./dist`.
