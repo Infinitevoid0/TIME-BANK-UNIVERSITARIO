@@ -1,46 +1,255 @@
 @import "tailwindcss";
+@import "./tokens.css";
 
-body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  background-color: #f3f4f6;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--fundo);
+    color: var(--texto);
+    font-family: var(--font-corpo);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      font-size: 1.0625rem;
+    }
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-titulo);
+    line-height: 1.25;
+    color: var(--texto);
+  }
+
+  h1 {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.625rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  a {
+    color: var(--destaque);
+  }
+
+  ::placeholder {
+    color: var(--texto-suave);
+    opacity: 1;
+  }
+
+  /* Foco sempre visível: 3px com 2px de afastamento. */
+  :focus-visible {
+    outline: 3px solid var(--foco);
+    outline-offset: 2px;
+  }
+
+  /* O preflight do Tailwind deixa botão com cursor padrão; aqui todo controle habilitado mostra a mãozinha. */
+  a[href], button, summary, select, label[for],
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"],
+  input[type="checkbox"], input[type="radio"], input[type="file"],
+  input[type="submit"], input[type="button"], input[type="reset"] {
+    cursor: pointer;
+  }
+
+  :disabled, [aria-disabled="true"], :disabled + label, label:has(> :disabled) {
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-property: opacity !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-/* Global Button Cursor Fix */
-button, 
-[role="button"] {
-  cursor: pointer;
+@layer components {
+  .botao-primario,
+  .botao-secundario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--raio-campo);
+    border: 1px solid var(--destaque);
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .botao-primario {
+    background-color: var(--destaque-fundo);
+    color: var(--sobre-destaque);
+  }
+
+  .botao-primario:hover:not(:disabled) {
+    background-color: var(--destaque-hover);
+    border-color: var(--destaque-hover);
+  }
+
+  .botao-secundario {
+    background-color: transparent;
+    color: var(--destaque);
+  }
+
+  .botao-secundario:hover:not(:disabled) {
+    background-color: var(--destaque-tenue);
+  }
+
+  .botao-primario:active:not(:disabled),
+  .botao-secundario:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .botao-primario:disabled,
+  .botao-secundario:disabled {
+    opacity: 0.45;
+  }
+
+  /* Terciário: só texto, sublinhado no hover. */
+  .botao-terciario {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.25rem;
+    color: var(--destaque);
+    font-weight: 600;
+    text-decoration: none;
+    background: none;
+    border: 0;
+  }
+
+  .botao-terciario:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .botao-terciario:active:not(:disabled) {
+    color: var(--destaque-hover);
+  }
+
+  .botao-terciario:disabled {
+    opacity: 0.45;
+  }
+
+  .rotulo {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .ajuda {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--texto-suave);
+  }
+
+  .campo {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--borda-campo);
+    border-radius: var(--raio-campo);
+    background-color: var(--superficie);
+    color: var(--texto);
+    font: inherit;
+    line-height: 1.4;
+  }
+
+  .campo[aria-invalid="true"] {
+    border-color: var(--erro-texto);
+    border-width: 2px;
+  }
+
+  .campo:disabled {
+    background-color: var(--fundo);
+    color: var(--texto-suave);
+  }
+
+  .erro-campo {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--erro-texto);
+  }
+
+  .painel {
+    background-color: var(--superficie);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-painel);
+  }
 }
 
-button:disabled,
-button[disabled] {
-  cursor: not-allowed;
+/* Editor da descrição (Quill) no visual dos campos. */
+.ql-toolbar.ql-snow {
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-campo) var(--raio-campo) 0 0;
+  font-family: var(--font-corpo);
 }
 
-/* Quill Editor Overrides */
-.ql-container {
-  border-bottom-left-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
-  font-size: 0.875rem;
-  min-height: 120px;
+.ql-container.ql-snow {
+  border: 1px solid var(--borda-campo);
+  border-top: 0;
+  border-radius: 0 0 var(--raio-campo) var(--raio-campo);
+  font-family: var(--font-corpo);
+  font-size: 1rem;
+  background-color: var(--superficie);
 }
 
-.ql-toolbar {
-  border-top-left-radius: 0.5rem;
-  border-top-right-radius: 0.5rem;
+.editor-invalido .ql-toolbar.ql-snow,
+.editor-invalido .ql-container.ql-snow {
+  border-color: var(--erro-texto);
+  border-width: 2px;
+}
+
+.editor-invalido .ql-container.ql-snow {
+  border-top: 0;
+}
+
+.ql-snow .ql-toolbar button,
+.ql-toolbar.ql-snow button {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.625rem;
 }
 
 .ql-editor {
-  min-height: 120px;
-  max-height: 300px;
+  min-height: 8rem;
+  max-height: 20rem;
   overflow-y: auto;
+  line-height: 1.6;
 }
 
-/* Prose style for rendered HTML descriptions */
-.prose img {
-  max-width: 100%;
-  border-radius: 0.5rem;
+.ql-editor.ql-blank::before {
+  color: var(--texto-suave);
+  font-style: normal;
 }
 
 /* Descrição vinda do editor: o Quill 2 grava listas como <ol><li data-list="bullet|ordered">. */
@@ -51,4 +260,5 @@ button[disabled] {
 .descricao-rica ol > li[data-list="ordered"],
 .descricao-rica ol > li:not([data-list]) { list-style-type: decimal; }
 .descricao-rica ol > li[data-list="bullet"] { list-style-type: disc; }
-.descricao-rica a { color: #00478F; text-decoration: underline; }
+.descricao-rica a { color: var(--destaque); text-decoration: underline; overflow-wrap: anywhere; }
+.descricao-rica { overflow-wrap: anywhere; }

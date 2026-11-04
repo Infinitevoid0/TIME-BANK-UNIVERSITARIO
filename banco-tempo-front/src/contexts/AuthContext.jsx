@@ -1,12 +1,13 @@
-import { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as loginService } from '../services/authService';
 import { getMe } from '../services/usuarioService';
 import { lerToken, salvarToken, limparSessao } from '../services/sessao';
 import { mensagemDeErro } from '../services/mensagens';
 import { useToast } from '../hooks/useToast';
+import { AuthContext } from './authContexto';
 
-export const AuthContext = createContext();
+const DESTINO_DEPOIS_DO_LOGIN = '/atividades';
 
 // O usuário (papel e horas incluídos) sempre vem de GET /usuarios/me, nunca de um objeto antigo salvo no navegador.
 export const AuthProvider = ({ children }) => {
@@ -30,22 +31,29 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        if (!lerToken()) return;
-        recarregarUsuario().finally(() => setCarregando(false));
-    }, [recarregarUsuario]);
+        if (!lerToken()) return undefined;
+        let ativo = true;
+        getMe()
+            .then((me) => { if (ativo) setUser(me); })
+            .catch(() => {})
+            .finally(() => { if (ativo) setCarregando(false); });
+        return () => { ativo = false; };
+    }, []);
 
-    const login = async (email, senha) => {
+    // Devolve o texto do erro para a tela mostrar junto do formulário; null quando deu certo.
+    const login = useCallback(async (email, senha) => {
         try {
             const data = await loginService(email, senha);
             salvarToken(data.token);
             const me = await getMe();
             setUser(me);
-            navigate('/atividades');
+            navigate(DESTINO_DEPOIS_DO_LOGIN);
             toast.success(`Olá, ${me.nome}.`);
+            return null;
         } catch (err) {
-            toast.error(mensagemDeErro(err, 'Não foi possível entrar agora. Tente de novo.'));
+            return mensagemDeErro(err, 'Não foi possível entrar agora. Tente de novo.');
         }
-    };
+    }, [navigate, toast]);
 
     const logout = useCallback(() => {
         limparSessao();
@@ -60,8 +68,7 @@ export const AuthProvider = ({ children }) => {
     const value = useMemo(() => ({
         user, carregando, login, logout, recarregarUsuario,
         isAluno, isModerador, isAdmin
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [user, carregando, logout, recarregarUsuario, isAluno, isModerador, isAdmin]);
+    }), [user, carregando, login, logout, recarregarUsuario, isAluno, isModerador, isAdmin]);
 
     return (
         <AuthContext.Provider value={value}>
