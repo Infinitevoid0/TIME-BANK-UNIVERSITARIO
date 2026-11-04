@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BancoTempo.Api.Controllers
 {
-    // Anexos da oferta (quem oferece, durante a moderação) e comprovantes da troca (participantes, em 6 ou 8).
+    // Anexos da oferta (quem oferece, durante a moderação) e comprovantes da troca (participantes, em 6, 7 ou 8).
     // Os arquivos só saem por GET /api/anexos/{id}/arquivo, com a mesma regra de quem pode ver.
     [Route("api/[controller]")]
     [ApiController]
@@ -19,7 +19,7 @@ namespace BancoTempo.Api.Controllers
         private static readonly StatusAtividade[] EstadosDaOferta =
             { StatusAtividade.Pendente, StatusAtividade.NecessitaCorrecao, StatusAtividade.PendentePosCorrecao };
         private static readonly StatusAtividade[] EstadosDeComprovante =
-            { StatusAtividade.EmExecucao, StatusAtividade.NecessitaRevisao };
+            { StatusAtividade.EmExecucao, StatusAtividade.AguardandoValidacao, StatusAtividade.NecessitaRevisao };
 
         private readonly AppDbContext _context;
         private readonly ArmazenamentoAnexos _armazenamento;
@@ -141,20 +141,21 @@ namespace BancoTempo.Api.Controllers
                 throw;
             }
 
-            if (finalidade == FinalidadeAnexo.Comprovante)
+            if (finalidade == FinalidadeAnexo.Comprovante && atividade.Status != StatusAtividade.AguardandoValidacao)
                 await _transicoes.ConcluirComprovantesSeCompletoAsync(atividadeId, User);
 
             return StatusCode(201, Mapeamento.Anexo(anexo));
         }
 
         // Remoção de arquivo: a moderação pode remover qualquer arquivo impróprio;
-        // quem enviou pode remover o próprio arquivo enquanto a etapa ainda aceita envios.
+        // quem enviou pode remover o próprio arquivo antes da decisão final da moderação.
+        // Se a remoção deixar a troca sem os dois comprovantes da rodada atual, volta o status de 7 para 6 ou 8.
         [HttpDelete("{id:int}/arquivo")]
         public async Task<IActionResult> DeleteAnexo(int id)
         {
             var anexo = await _context.AnexosAtividades.FindAsync(id);
             if (anexo == null) return this.NaoEncontrado("Não encontramos este arquivo.");
-            var atividade = await _context.Atividades.AsNoTracking().FirstAsync(a => a.Id == anexo.AtividadeId);
+            var atividade = await _context.Atividades.FirstAsync(a => a.Id == anexo.AtividadeId);
 
             var eu = User.IdPessoaOuNulo();
             var souAutorNaEtapaAberta = eu.HasValue && anexo.EnviadoPorId == eu.Value && (
@@ -168,6 +169,30 @@ namespace BancoTempo.Api.Controllers
             _context.AnexosAtividades.Remove(anexo);
             await _context.SaveChangesAsync();
             _armazenamento.Remover(anexo.CaminhoArquivo);
+
+            if (anexo.Finalidade == FinalidadeAnexo.Comprovante && atividade.Status == StatusAtividade.AguardandoValidacao)
+            {
+                var comprovantesRestantes = await _context.AnexosAtividades.AsNoTracking()
+                    .Where(a => a.AtividadeId == atividade.Id
+                                && a.Finalidade == FinalidadeAnexo.Comprovante
+                                && a.Rodada == atividade.RevisoesComprovantes)
+                    .Select(a => a.EnviadoPorId)
+                    .Distinct()
+                    .ToListAsync();
+
+                var ambosEnviaram = comprovantesRestantes.Contains(atividade.OfertanteId)
+                    && atividade.CompradorId.HasValue
+                    && comprovantesRestantes.Contains(atividade.CompradorId.Value);
+
+                if (!ambosEnviaram)
+                {
+                    atividade.Status = atividade.RevisoesComprovantes > 0
+                        ? StatusAtividade.NecessitaRevisao
+                        : StatusAtividade.EmExecucao;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             return NoContent();
         }
 

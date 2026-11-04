@@ -136,7 +136,8 @@ const UploadComprovantes = ({
     const ofertanteEnviou = comprovantesDaRodada.some((a) => a.enviadoPorId === ofertanteId);
     const compradorEnviou = comprovantesDaRodada.some((a) => a.enviadoPorId === compradorId);
     const souParticipante = user?.id === ofertanteId || user?.id === compradorId;
-    const canUpload = souParticipante && (statusAtual === 6 || statusAtual === 8);
+    const canUpload =
+        souParticipante && (statusAtual === 6 || statusAtual === 7 || statusAtual === 8);
 
     return (
         <section aria-labelledby="titulo-comprovantes" className="painel p-5 space-y-4">
@@ -197,6 +198,12 @@ const UploadComprovantes = ({
                         {feedbackConferencia ? ` Recado da moderação: ${feedbackConferencia}` : ''}
                     </p>
                 </div>
+            )}
+
+            {statusAtual === 7 && ofertanteEnviou && compradorEnviou && (
+                <p className="rounded-campo border border-borda bg-concluido-fundo p-3 text-sm text-concluido">
+                    Comprovantes enviados. A troca está em conferência pela moderação. Se precisar trocar o seu arquivo antes da conferência, remova o anterior ou envie outro abaixo.
+                </p>
             )}
 
             {canUpload ? (
@@ -264,13 +271,11 @@ const UploadComprovantes = ({
                 </div>
             ) : (
                 <p className="rounded-campo border border-borda bg-fundo p-3 text-sm text-texto-suave">
-                    {statusAtual === 7
-                        ? 'Comprovantes enviados. A troca está em conferência pela moderação.'
-                        : statusAtual === 9
-                          ? 'Troca concluída e horas registradas.'
-                          : statusAtual === 10
-                            ? 'Troca cancelada e horas devolvidas.'
-                            : 'O envio de comprovantes fica aberto para quem participa enquanto a troca está em andamento.'}
+                    {statusAtual === 9
+                        ? 'Troca concluída e horas registradas.'
+                        : statusAtual === 10
+                          ? 'Troca cancelada e horas devolvidas.'
+                          : 'O envio de comprovantes fica aberto para quem participa enquanto a troca está em andamento.'}
                 </p>
             )}
 
