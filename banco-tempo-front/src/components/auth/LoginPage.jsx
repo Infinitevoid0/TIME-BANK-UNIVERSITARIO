@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Clock } from 'lucide-react';
@@ -10,12 +10,15 @@ const LoginPage = () => {
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const toast = useToast();
+    const [params] = useSearchParams();
+    const sessaoEncerrada = params.get('sessao') === 'encerrada';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!email.endsWith('@ufsc.br') && !email.endsWith('@grad.ufsc.br')) {
-            toast.error('O email deve ser um email institucional da UFSC (@ufsc.br ou @grad.ufsc.br).');
+        const emailLimpo = email.trim().toLowerCase();
+        if (!emailLimpo.endsWith('@ufsc.br') && !emailLimpo.endsWith('@grad.ufsc.br')) {
+            toast.error('Use seu e-mail institucional (@grad.ufsc.br ou @ufsc.br).');
             return;
         }
 
@@ -26,7 +29,7 @@ const LoginPage = () => {
 
         setLoading(true);
         try {
-            await login(email, senha);
+            await login(email.trim().toLowerCase(), senha);
         } finally {
             setLoading(false);
         }
@@ -47,6 +50,12 @@ const LoginPage = () => {
                     </h2>
                 </div>
                 
+                {sessaoEncerrada && (
+                    <p role="status" className="rounded-md border border-gray-300 bg-gray-50 p-3 text-sm text-gray-800">
+                        Sua sessão terminou. Entre de novo para continuar.
+                    </p>
+                )}
+
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4 rounded-md">
                         <div>

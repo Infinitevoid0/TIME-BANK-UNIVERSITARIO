@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getMinhasOfertas, getMinhasCompras, deleteAtividade } from '../../services/atividadeService';
+import { mensagemDeErro } from '../../services/mensagens';
 import api from '../../services/api';
 import AtividadeFormModal from '../atividades/AtividadeFormModal';
 import { useAuth } from '../../hooks/useAuth';
@@ -42,21 +43,21 @@ const MinhasAtividadesPage = () => {
         const fetchData = async () => {
             try {
                 const [ofertasData, comprasData, disciplinasData] = await Promise.all([
-                    getMinhasOfertas(user.id).catch(() => []),
-                    getMinhasCompras(user.id).catch(() => []),
+                    getMinhasOfertas(),
+                    getMinhasCompras(),
                     api.get('/disciplinas').then(res => res.data).catch(() => [])
                 ]);
                 setOfertas(ofertasData);
                 setCompras(comprasData);
                 setDisciplinas(disciplinasData);
             } catch (err) {
-                toast.error('Erro ao buscar o dashboard.');
+                toast.error(mensagemDeErro(err, 'Não foi possível carregar suas atividades.'));
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, [user.id, toast]);
+    }, [user?.id]);
 
     const handleOpenCorrigir = (atividade) => {
         setAtividadeCorrigir(atividade);
@@ -75,12 +76,11 @@ const MinhasAtividadesPage = () => {
             return;
         }
         try {
-            await deleteAtividade(atividade.id, user.id);
+            await deleteAtividade(atividade.id);
             setOfertas(prev => prev.filter(a => a.id !== atividade.id));
             toast.success('Atividade excluída com sucesso!');
         } catch (error) {
-            const msg = error.response?.data || 'Erro ao excluir atividade.';
-            toast.error(typeof msg === 'string' ? msg : 'Erro ao excluir atividade.');
+            toast.error(mensagemDeErro(error, 'Não foi possível excluir agora.'));
         }
     };
 

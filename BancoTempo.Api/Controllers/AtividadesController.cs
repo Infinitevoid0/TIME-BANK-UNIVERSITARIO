@@ -1,447 +1,310 @@
+using BancoTempo.Api.Data;
+using BancoTempo.Api.DTOs;
+using BancoTempo.Api.Infra;
+using BancoTempo.Api.Models;
+using BancoTempo.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BancoTempo.Api.Data;
-using BancoTempo.Api.Models;
 
 namespace BancoTempo.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AtividadesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private static readonly StatusAtividade[] EstadosDeTroca =
+        {
+            StatusAtividade.EmExecucao, StatusAtividade.AguardandoValidacao, StatusAtividade.NecessitaRevisao,
+            StatusAtividade.Validada, StatusAtividade.Invalida,
+        };
 
-        public AtividadesController(AppDbContext context)
+        private readonly AppDbContext _context;
+        private readonly TransicoesAtividade _transicoes;
+        private readonly SanitizadorHtml _sanitizador;
+        private readonly RegistroEventos _eventos;
+        private readonly OpcoesBancoTempo _opcoes;
+
+        public AtividadesController(AppDbContext context, TransicoesAtividade transicoes, SanitizadorHtml sanitizador,
+            RegistroEventos eventos, OpcoesBancoTempo opcoes)
         {
             _context = context;
+            _transicoes = transicoes;
+            _sanitizador = sanitizador;
+            _eventos = eventos;
+            _opcoes = opcoes;
         }
 
-        // GET /api/atividades?cursoId=1&disciplinaId=2&custoMaximo=5
-        // Todos os filtros são opcionais e cumulativos (AND).
+        private IQueryable<Atividade> ComDetalhes() => _context.Atividades.AsNoTracking()
+            .Include(a => a.Ofertante)
+            .Include(a => a.Comprador)
+            .Include(a => a.Disciplina);
+
+        // Quem pode ver uma atividade: oferta aberta, qualquer pessoa logada; outros estados, participantes e moderação.
+        public static bool PodeVer(Atividade a, System.Security.Claims.ClaimsPrincipal user)
+        {
+            if (a.Status == StatusAtividade.Aprovada || user.EhModeracao()) return true;
+            var eu = user.IdPessoaOuNulo();
+            return eu == a.OfertanteId || (a.CompradorId.HasValue && eu == a.CompradorId);
+        }
+
+        // GET /api/atividades?cursoId=1&disciplinaId=2&custoMaximo=2&busca=calculo (só ofertas abertas)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Atividade>>> GetAtividades(
-            [FromQuery] int? cursoId,
-            [FromQuery] int? disciplinaId,
-            [FromQuery] int? custoMaximo)
+        public async Task<ActionResult<IEnumerable<AtividadeDto>>> GetAtividades(
+            [FromQuery] int? cursoId, [FromQuery] int? disciplinaId, [FromQuery] int? custoMaximo, [FromQuery] string? busca)
         {
-            var query = _context.Atividades
-                .Where(a => a.Status == StatusAtividade.Aprovada)
-                .Include(a => a.Ofertante)
-                .Include(a => a.Comprador)
-                .Include(a => a.Disciplina)
-                .Include(a => a.Anexos)
-                .AsQueryable();
-
-            // Filtro por curso: atividades cuja disciplina pertence ao curso informado
-            if (cursoId.HasValue)
+            var query = ComDetalhes().Where(a => a.Status == StatusAtividade.Aprovada);
+            if (cursoId.HasValue) query = query.Where(a => a.Disciplina != null && a.Disciplina.CursoId == cursoId.Value);
+            if (disciplinaId.HasValue) query = query.Where(a => a.DisciplinaId == disciplinaId.Value);
+            if (custoMaximo.HasValue) query = query.Where(a => a.CustoHoras <= custoMaximo.Value);
+            if (!string.IsNullOrWhiteSpace(busca))
             {
-                query = query.Where(a => a.Disciplina != null && a.Disciplina.CursoId == cursoId.Value);
+                var termo = $"%{busca.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_")}%";
+                query = query.Where(a => EF.Functions.ILike(a.Titulo, termo) || EF.Functions.ILike(a.Descricao, termo));
             }
-
-            // Filtro por disciplina específica
-            if (disciplinaId.HasValue)
-            {
-                query = query.Where(a => a.DisciplinaId == disciplinaId.Value);
-            }
-
-            // Filtro por custo máximo (útil para "apenas o que posso comprar")
-            if (custoMaximo.HasValue)
-            {
-                query = query.Where(a => a.CustoHoras <= custoMaximo.Value);
-            }
-
-            return await query.ToListAsync();
+            var lista = await query.OrderByDescending(a => a.DataCriacao).ToListAsync();
+            return Ok(lista.Select(a => Mapeamento.Atividade(a, User)));
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Atividade>> GetAtividade(int id)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<AtividadeDto>> GetAtividade(int id)
         {
-            var atividade = await _context.Atividades
-                .Include(a => a.Ofertante)
-                .Include(a => a.Comprador)
-                .Include(a => a.Disciplina)
-                .Include(a => a.Anexos)
-                .FirstOrDefaultAsync(a => a.Id == id);
-
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            return atividade;
+            var atividade = await ComDetalhes().FirstOrDefaultAsync(a => a.Id == id);
+            if (atividade == null) return this.NaoEncontrado("Não encontramos esta atividade.");
+            if (!PodeVer(atividade, User)) return await NegarAsync(atividade.Id);
+            return Ok(Mapeamento.Atividade(atividade, User));
         }
 
-        // GET /api/atividades/pendentes — Atividades pendentes de moderação (status Pendente e PendentePosCorrecao)
-        [HttpGet("pendentes")]
-        public async Task<ActionResult<IEnumerable<Atividade>>> GetAtividadesPendentes()
+        // Linha do tempo: transições aceitas, com data.
+        [HttpGet("{id:int}/historico")]
+        public async Task<ActionResult<IEnumerable<EventoHistoricoDto>>> GetHistorico(int id)
         {
-            var atividades = await _context.Atividades
-                .Where(a => a.Status == StatusAtividade.Pendente || a.Status == StatusAtividade.PendentePosCorrecao)
-                .Include(a => a.Ofertante)
-                .Include(a => a.Disciplina)
-                .Include(a => a.Anexos)
-                .OrderByDescending(a => a.DataCriacao)
+            var atividade = await _context.Atividades.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+            if (atividade == null) return this.NaoEncontrado("Não encontramos esta atividade.");
+            var eu = User.IdPessoaOuNulo();
+            var participante = eu == atividade.OfertanteId || (atividade.CompradorId.HasValue && eu == atividade.CompradorId);
+            if (!participante && !User.EhModeracao()) return await NegarAsync(atividade.Id);
+
+            var eventos = await _context.EventosSistema.AsNoTracking()
+                .Where(e => e.AtividadeId == id && e.StatusNovo != null && e.HttpStatus >= 200 && e.HttpStatus < 300)
+                .OrderBy(e => e.OcorridoEm).ThenBy(e => e.Id)
+                .Select(e => new EventoHistoricoDto(e.OcorridoEm, e.Tipo, e.StatusAnterior, e.StatusNovo))
                 .ToListAsync();
-
-            return Ok(atividades);
+            return Ok(eventos);
         }
 
-        // GET /api/atividades/minhas/{ofertanteId} — Atividades ofertadas pelo usuário
-        [HttpGet("minhas/{ofertanteId}")]
-        public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasAtividades(int ofertanteId, [FromQuery] string? status)
+        [HttpGet("pendentes")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
+        public async Task<ActionResult<IEnumerable<AtividadeDto>>> GetAtividadesPendentes()
         {
-            var query = _context.Atividades
-                .Where(a => a.OfertanteId == ofertanteId)
-                .Include(a => a.Ofertante)
-                .Include(a => a.Comprador)
-                .Include(a => a.Disciplina)
-                .Include(a => a.Anexos)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(status))
-            {
-                var statusList = status.Split(',').Select(int.Parse).ToList();
-                query = query.Where(a => statusList.Contains((int)a.Status));
-            }
-
-            var atividades = await query.ToListAsync();
-
-            return Ok(atividades);
+            var lista = await ComDetalhes()
+                .Where(a => a.Status == StatusAtividade.Pendente || a.Status == StatusAtividade.PendentePosCorrecao)
+                .OrderByDescending(a => a.DataCriacao).ToListAsync();
+            return Ok(lista.Select(a => Mapeamento.Atividade(a, User)));
         }
 
-        // GET /api/atividades/minhas-compras/{compradorId} — Atividades compradas pelo usuário
-        [HttpGet("minhas-compras/{compradorId}")]
-        public async Task<ActionResult<IEnumerable<Atividade>>> GetMinhasCompras(int compradorId, [FromQuery] string? status)
+        // Fila da conferência final: trocas em andamento (6, 7 e 8).
+        [HttpGet("conferencia")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
+        public async Task<ActionResult<IEnumerable<AtividadeDto>>> GetConferencia()
         {
-            var query = _context.Atividades
-                .Where(a => a.CompradorId == compradorId)
-                .Include(a => a.Ofertante)
-                .Include(a => a.Comprador)
-                .Include(a => a.Disciplina)
-                .Include(a => a.Anexos)
-                .AsQueryable();
+            var lista = await ComDetalhes()
+                .Where(a => a.Status == StatusAtividade.EmExecucao || a.Status == StatusAtividade.AguardandoValidacao
+                            || a.Status == StatusAtividade.NecessitaRevisao)
+                .OrderBy(a => a.DataCriacao).ToListAsync();
+            return Ok(lista.Select(a => Mapeamento.Atividade(a, User)));
+        }
 
-            if (!string.IsNullOrEmpty(status))
-            {
-                var statusList = status.Split(',').Select(int.Parse).ToList();
-                query = query.Where(a => statusList.Contains((int)a.Status));
-            }
+        [HttpGet("minhas")]
+        public async Task<ActionResult<IEnumerable<AtividadeDto>>> GetMinhasAtividades([FromQuery] string? status)
+        {
+            if (!TentarLerStatus(status, out var filtro)) return ErroStatus();
+            var eu = User.IdPessoa();
+            var query = ComDetalhes().Where(a => a.OfertanteId == eu);
+            if (filtro.Count > 0) query = query.Where(a => filtro.Contains(a.Status));
+            var lista = await query.OrderByDescending(a => a.DataCriacao).ToListAsync();
+            return Ok(lista.Select(a => Mapeamento.Atividade(a, User)));
+        }
 
-            var atividades = await query.ToListAsync();
-
-            return Ok(atividades);
+        [HttpGet("meus-pedidos")]
+        public async Task<ActionResult<IEnumerable<AtividadeDto>>> GetMeusPedidos([FromQuery] string? status)
+        {
+            if (!TentarLerStatus(status, out var filtro)) return ErroStatus();
+            var eu = User.IdPessoa();
+            var query = ComDetalhes().Where(a => a.CompradorId == eu);
+            if (filtro.Count > 0) query = query.Where(a => filtro.Contains(a.Status));
+            var lista = await query.OrderByDescending(a => a.DataCriacao).ToListAsync();
+            return Ok(lista.Select(a => Mapeamento.Atividade(a, User)));
         }
 
         [HttpPost]
-        public async Task<ActionResult<Atividade>> PostAtividade(DTOs.AtividadeCreateDto dto)
+        public async Task<ActionResult<AtividadeDto>> PostAtividade(AtividadeCreateDto dto)
         {
-            if (dto.CustoHoras < 1)
-            {
-                return BadRequest("O custo deve ser de no mínimo 1 hora.");
-            }
+            var validacao = await ValidarOfertaAsync(dto.Titulo, dto.Descricao, dto.CustoHoras, dto.DisciplinaId);
+            if (validacao.Erro != null) return validacao.Erro;
 
-            if (dto.Titulo != null && dto.Titulo.Length > 120)
-            {
-                return BadRequest("O título deve ter no máximo 120 caracteres.");
-            }
-
-            if (dto.Descricao != null && dto.Descricao.Length > 15000)
-            {
-                return BadRequest("A descrição é muito longa (limite técnico excedido).");
-            }
-
+            var status = _opcoes.ModeracaoInicial ? StatusAtividade.Pendente : StatusAtividade.Aprovada;
             var atividade = new Atividade
             {
-                Titulo = dto.Titulo,
-                Descricao = dto.Descricao,
+                Titulo = validacao.Titulo,
+                Descricao = validacao.Descricao,
                 CustoHoras = dto.CustoHoras,
-                OfertanteId = dto.OfertanteId,
+                OfertanteId = User.IdPessoa(),
                 DisciplinaId = dto.DisciplinaId,
-                Status = StatusAtividade.Pendente
+                Status = status,
             };
 
+            await using var tx = await _context.Database.BeginTransactionAsync();
             _context.Atividades.Add(atividade);
             await _context.SaveChangesAsync();
+            RegistroEventos.Adicionar(_context, RegistroEventos.Novo(TiposEvento.OfertaCriada, User, atividade.Id, null, status, 201));
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
 
-            return CreatedAtAction("GetAtividade", new { id = atividade.Id }, atividade);
+            var criada = await ComDetalhes().FirstAsync(a => a.Id == atividade.Id);
+            return CreatedAtAction(nameof(GetAtividade), new { id = atividade.Id }, Mapeamento.Atividade(criada, User));
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutAtividade(int id, Atividade atividade)
-        {
-            if (id != atividade.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(atividade).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!AtividadeExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // PUT /api/atividades/{id}/moderar — Aprovar atividade pendente
-        [HttpPut("{id}/moderar")]
+        [HttpPut("{id:int}/moderar")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
         public async Task<IActionResult> ModerarAtividade(int id, [FromBody] StatusAtividade novoStatus)
         {
-            var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            if ((atividade.Status == StatusAtividade.Pendente || atividade.Status == StatusAtividade.PendentePosCorrecao) && novoStatus == StatusAtividade.Aprovada)
-            {
-                 atividade.Status = novoStatus;
-                 await _context.SaveChangesAsync();
-                 return Ok(atividade);
-            }
-
-            return BadRequest("Ação de moderação inválida. Apenas atividades pendentes podem ser aprovadas através desta rota.");
+            if (novoStatus != StatusAtividade.Aprovada)
+                return this.DadoInvalido("novoStatus", "Por esta rota só dá para aprovar (status 2).");
+            return await Responder(id, await _transicoes.AprovarAsync(id, User));
         }
 
-        // PUT /api/atividades/{id}/reprovar — Reprovar atividade pendente
-        [HttpPut("{id}/reprovar")]
+        [HttpPut("{id:int}/reprovar")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
         public async Task<IActionResult> ReprovarAtividade(int id)
+            => await Responder(id, await _transicoes.ReprovarAsync(id, User));
+
+        [HttpPut("{id:int}/solicitar-correcao")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
+        public async Task<IActionResult> SolicitarCorrecao(int id, [FromBody] SolicitarCorrecaoDto dto)
         {
-            var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            if (atividade.Status != StatusAtividade.Pendente && atividade.Status != StatusAtividade.PendentePosCorrecao)
-            {
-                return BadRequest("Apenas atividades pendentes podem ser reprovadas.");
-            }
-
-            atividade.Status = StatusAtividade.Recusada;
-            await _context.SaveChangesAsync();
-
-            return Ok(atividade);
+            var feedback = dto.Feedback?.Trim();
+            if (string.IsNullOrWhiteSpace(feedback))
+                return this.Problema(422, Codigos.FeedbackObrigatorio, "Escreva o que precisa ser ajustado na oferta.");
+            if (feedback.Length > 1000) return this.DadoInvalido("feedback", "Use no máximo 1000 caracteres.");
+            return await Responder(id, await _transicoes.SolicitarCorrecaoAsync(id, feedback, User));
         }
 
-        // PUT /api/atividades/{id}/solicitar-correcao
-        [HttpPut("{id}/solicitar-correcao")]
-        public async Task<IActionResult> SolicitarCorrecao(int id, [FromBody] DTOs.SolicitarCorrecaoDto dto)
+        [HttpPut("{id:int}/corrigir")]
+        public async Task<IActionResult> CorrigirAtividade(int id, [FromBody] CorrigirAtividadeDto dto)
         {
-            var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
-            {
-                return NotFound();
-            }
+            var atual = await _context.Atividades.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+            if (atual == null) return this.NaoEncontrado("Não encontramos esta atividade.");
+            if (atual.OfertanteId != User.IdPessoa()) return await NegarAsync(id, "Só quem publicou a oferta pode corrigi-la.");
 
-            if (atividade.Status != StatusAtividade.Pendente)
-            {
-                return BadRequest("Apenas atividades no status inicial pendente podem receber solicitação de correção.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.Feedback))
-            {
-                return BadRequest("O feedback não pode estar vazio.");
-            }
-
-            atividade.Status = StatusAtividade.NecessitaCorrecao;
-            atividade.FeedbackModeracao = dto.Feedback;
-            await _context.SaveChangesAsync();
-
-            return Ok(atividade);
+            var disciplinaId = dto.DisciplinaId ?? atual.DisciplinaId;
+            var validacao = await ValidarOfertaAsync(dto.Titulo, dto.Descricao, dto.CustoHoras, disciplinaId);
+            if (validacao.Erro != null) return validacao.Erro;
+            return await Responder(id, await _transicoes.CorrigirAsync(id, validacao.Titulo, validacao.Descricao, dto.CustoHoras, disciplinaId, User));
         }
 
-        // PUT /api/atividades/{id}/corrigir
-        [HttpPut("{id}/corrigir")]
-        public async Task<IActionResult> CorrigirAtividade(int id, [FromBody] DTOs.CorrigirAtividadeDto dto)
+        // POST /api/atividades/{id}/comprar: pedido de ajuda. A identidade vem do token.
+        [HttpPost("{id:int}/comprar")]
+        public async Task<IActionResult> ComprarAtividade(int id)
         {
-            var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            if (atividade.Status != StatusAtividade.NecessitaCorrecao)
-            {
-                return BadRequest("Apenas atividades que necessitam correção podem ser corrigidas através desta rota.");
-            }
-
-            if (dto.CustoHoras < 1)
-            {
-                return BadRequest("O custo deve ser de no mínimo 1 hora.");
-            }
-
-            if (dto.Titulo != null && dto.Titulo.Length > 120)
-            {
-                return BadRequest("O título deve ter no máximo 120 caracteres.");
-            }
-
-            if (dto.Descricao != null && dto.Descricao.Length > 15000)
-            {
-                return BadRequest("A descrição é muito longa (limite técnico excedido).");
-            }
-
-            atividade.Titulo = dto.Titulo;
-            atividade.Descricao = dto.Descricao;
-            atividade.CustoHoras = dto.CustoHoras;
-            atividade.Status = StatusAtividade.PendentePosCorrecao;
-            
-            await _context.SaveChangesAsync();
-
-            return Ok(atividade);
+            var resultado = await _transicoes.PedirAsync(id, User);
+            if (!resultado.Ok) return this.Problema(resultado.HttpStatus, resultado.Codigo!, resultado.Mensagem!);
+            var atividade = await ComDetalhes().FirstAsync(a => a.Id == id);
+            return Ok(new PedidoRespostaDto(Mapeamento.Atividade(atividade, User), resultado.ChatId ?? 0));
         }
 
-        // POST /api/atividades/{id}/comprar
-        [HttpPost("{id}/comprar")]
-        public async Task<IActionResult> ComprarAtividade(int id, [FromBody] DTOs.ComprarAtividadeDto dto)
+        [HttpPut("{id:int}/moderacao-final")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
+        public async Task<IActionResult> ModeracaoFinal(int id, [FromBody] ModeracaoFinalDto dto)
         {
-            var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
+            var acao = dto.Acao?.Trim() ?? string.Empty;
+            if (acao.Equals("Validar", StringComparison.OrdinalIgnoreCase))
+                return await Responder(id, await _transicoes.ValidarAsync(id, User));
+            if (acao.Equals("Invalidar", StringComparison.OrdinalIgnoreCase))
+                return await Responder(id, await _transicoes.InvalidarAsync(id, User));
+            if (acao.Equals("NecessitaRevisao", StringComparison.OrdinalIgnoreCase))
             {
-                return NotFound();
+                var feedback = dto.Feedback?.Trim();
+                if (string.IsNullOrWhiteSpace(feedback))
+                    return this.Problema(422, Codigos.FeedbackObrigatorio, "Escreva o que precisa ser ajustado nos comprovantes.");
+                if (feedback.Length > 1000) return this.DadoInvalido("feedback", "Use no máximo 1000 caracteres.");
+                return await Responder(id, await _transicoes.PedirAjusteComprovantesAsync(id, feedback, User));
             }
-
-            if (atividade.Status != StatusAtividade.Aprovada)
-            {
-                return BadRequest("Apenas atividades com status 'Aprovada' podem ser compradas.");
-            }
-
-            var comprador = await _context.Usuarios.FindAsync(dto.CompradorId);
-            if (comprador == null)
-            {
-                return NotFound("Comprador não encontrado.");
-            }
-
-            if (comprador.SaldoHoras < atividade.CustoHoras)
-            {
-                return BadRequest("Saldo insuficiente.");
-            }
-
-            // Débito imediato
-            comprador.SaldoHoras -= atividade.CustoHoras;
-
-            // Vincula o comprador e altera o status
-            atividade.CompradorId = comprador.Id;
-            atividade.Status = StatusAtividade.EmExecucao;
-
-            // Cria instância de Chat Privado
-            var chat = new ChatPrivado
-            {
-                AtividadeId = atividade.Id,
-                DataCriacao = DateTime.UtcNow
-            };
-            _context.Chats.Add(chat);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { Mensagem = "Compra realizada com sucesso", Atividade = atividade, ChatId = chat.Id });
+            return this.DadoInvalido("acao", "Ação desconhecida. Use Validar, Invalidar ou NecessitaRevisao.");
         }
 
-        // PUT /api/atividades/{id}/moderacao-final
-        [HttpPut("{id}/moderacao-final")]
-        public async Task<IActionResult> ModeracaoFinal(int id, [FromBody] DTOs.ModeracaoFinalDto dto)
+        // Moderação desfaz uma troca parada (6 ou 8): horas devolvidas a quem pediu.
+        [HttpPut("{id:int}/cancelar-troca")]
+        [Authorize(Policy = Identidade.PoliticaModeracao)]
+        public async Task<IActionResult> CancelarTroca(int id, [FromBody] CancelarTrocaDto? dto)
         {
-            var atividade = await _context.Atividades
-                .Include(a => a.Ofertante)
-                .Include(a => a.Comprador)
-                .FirstOrDefaultAsync(a => a.Id == id);
-
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            if (atividade.Status != StatusAtividade.AguardandoValidacao)
-            {
-                return BadRequest("A atividade não está aguardando validação.");
-            }
-
-            // Verifica se já passou por revisão antes (se existe feedback prévio) para a Regra de Rodada Final
-            bool jaPassouPorRevisao = !string.IsNullOrEmpty(atividade.FeedbackModeracao);
-
-            if (dto.Acao.Equals("Validar", StringComparison.OrdinalIgnoreCase))
-            {
-                atividade.Status = StatusAtividade.Validada;
-                if (atividade.Ofertante != null)
-                {
-                    atividade.Ofertante.SaldoHoras += atividade.CustoHoras;
-                }
-            }
-            else if (dto.Acao.Equals("Invalidar", StringComparison.OrdinalIgnoreCase))
-            {
-                atividade.Status = StatusAtividade.Invalida;
-                if (atividade.Comprador != null)
-                {
-                    atividade.Comprador.SaldoHoras += atividade.CustoHoras; // Estorno
-                }
-            }
-            else if (dto.Acao.Equals("NecessitaRevisao", StringComparison.OrdinalIgnoreCase))
-            {
-                if (jaPassouPorRevisao)
-                {
-                    return BadRequest("Ação inválida. Esta atividade já passou por revisão e agora só pode ser Validada ou Invalidada.");
-                }
-
-                if (string.IsNullOrWhiteSpace(dto.Feedback))
-                {
-                    return BadRequest("É obrigatório fornecer um feedback ao solicitar revisão.");
-                }
-
-                atividade.Status = StatusAtividade.NecessitaRevisao;
-                atividade.FeedbackModeracao = dto.Feedback;
-            }
-            else
-            {
-                return BadRequest("Ação desconhecida. Use: Validar, Invalidar ou NecessitaRevisao.");
-            }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(atividade);
+            var motivo = string.IsNullOrWhiteSpace(dto?.Motivo) ? null : dto!.Motivo!.Trim();
+            if (motivo?.Length > 1000) return this.DadoInvalido("motivo", "Use no máximo 1000 caracteres.");
+            return await Responder(id, await _transicoes.CancelarTrocaAsync(id, motivo, User));
         }
 
-        // DELETE /api/atividades/{id}?userId={userId}
-        // Apenas o ofertante pode excluir, e somente quando a atividade foi Recusada (3).
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAtividade(int id, [FromQuery] int userId)
+        // Só quem oferece, e só oferta recusada (regra mantida do main).
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteAtividade(int id)
         {
             var atividade = await _context.Atividades.FindAsync(id);
-            if (atividade == null)
-            {
-                return NotFound();
-            }
-
-            if (atividade.OfertanteId != userId)
-            {
-                return BadRequest("Você só pode excluir suas próprias atividades.");
-            }
-
+            if (atividade == null) return this.NaoEncontrado("Não encontramos esta atividade.");
+            if (atividade.OfertanteId != User.IdPessoa()) return await NegarAsync(id, "Só quem publicou a oferta pode excluí-la.");
             if (atividade.Status != StatusAtividade.Recusada)
-            {
-                return BadRequest("Apenas atividades com status 'Recusada' podem ser excluídas.");
-            }
+                return this.Problema(409, Codigos.TransicaoInvalida, "Só dá para excluir ofertas que não foram aceitas pela moderação.");
 
-            _context.Atividades.Remove(atividade);
-            await _context.SaveChangesAsync();
-
+            var deletadas = await _context.Atividades.Where(a => a.Id == id && a.Status == StatusAtividade.Recusada).ExecuteDeleteAsync();
+            if (deletadas == 0)
+                return this.Problema(409, Codigos.TransicaoInvalida, "Esta oferta mudou agora há pouco. Atualize a página.");
             return NoContent();
         }
 
-        private bool AtividadeExists(int id)
+        private async Task<IActionResult> Responder(int id, ResultadoTransicao resultado)
         {
-            return _context.Atividades.Any(e => e.Id == id);
+            if (!resultado.Ok) return this.Problema(resultado.HttpStatus, resultado.Codigo!, resultado.Mensagem!);
+            var atividade = await ComDetalhes().FirstAsync(a => a.Id == id);
+            return Ok(Mapeamento.Atividade(atividade, User));
         }
+
+        private async Task<ObjectResult> NegarAsync(int atividadeId, string mensagem = "Esta troca é só de quem participa dela e da moderação.")
+        {
+            await _eventos.GravarSeparadoAsync(RegistroEventos.Novo(TiposEvento.AcessoNegado, User, atividadeId, httpStatus: 403, codigo: Codigos.AcessoNegado));
+            return this.Problema(403, Codigos.AcessoNegado, mensagem);
+        }
+
+        private record ValidacaoOferta(string Titulo, string Descricao, ObjectResult? Erro);
+
+        private async Task<ValidacaoOferta> ValidarOfertaAsync(string? titulo, string? descricao, int custo, int? disciplinaId)
+        {
+            var t = titulo?.Trim() ?? string.Empty;
+            if (t.Length == 0) return new(t, "", this.DadoInvalido("titulo", "Dê um título para a oferta."));
+            if (t.Length > 120) return new(t, "", this.DadoInvalido("titulo", "Use no máximo 120 caracteres no título."));
+            if (custo < 1 || custo > _opcoes.HorasMaximasPorOferta)
+                return new(t, "", this.Problema(422, Codigos.TempoForaDoLimite,
+                    $"Informe um tempo entre 1 e {_opcoes.HorasMaximasPorOferta} h, em horas inteiras."));
+            if ((descricao?.Length ?? 0) > 15000)
+                return new(t, "", this.DadoInvalido("descricao", "A descrição ficou longa demais. Resuma um pouco."));
+            var d = _sanitizador.Limpar(descricao);
+            if (d.Length == 0) return new(t, "", this.DadoInvalido("descricao", "Descreva a ajuda que você oferece."));
+            if (disciplinaId.HasValue && !await _context.Disciplinas.AnyAsync(x => x.Id == disciplinaId.Value))
+                return new(t, d, this.Problema(422, Codigos.ReferenciaInexistente, "Escolha uma disciplina da lista."));
+            return new(t, d, null);
+        }
+
+        private static bool TentarLerStatus(string? texto, out List<StatusAtividade> filtro)
+        {
+            filtro = new List<StatusAtividade>();
+            if (string.IsNullOrWhiteSpace(texto)) return true;
+            foreach (var parte in texto.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!int.TryParse(parte, out var n) || !Enum.IsDefined(typeof(StatusAtividade), n)) return false;
+                filtro.Add((StatusAtividade)n);
+            }
+            return true;
+        }
+
+        private ObjectResult ErroStatus() => this.Problema(400, Codigos.ParametroInvalido,
+            "O filtro de status deve ser uma lista de números de 1 a 10 separados por vírgula, como 1,2.");
     }
 }

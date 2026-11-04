@@ -19,8 +19,16 @@ public class Atividade
 
     public StatusAtividade Status { get; set; }
 
+    // Feedback da moderação inicial (pedido de correção da oferta).
     [MaxLength(1000, ErrorMessage = "O feedback deve ter no máximo 1000 caracteres.")]
     public string? FeedbackModeracao { get; set; }
+
+    // Feedback da conferência final (ajuste dos comprovantes ou motivo do cancelamento), separado do anterior (D15).
+    [MaxLength(1000, ErrorMessage = "O feedback deve ter no máximo 1000 caracteres.")]
+    public string? FeedbackConferencia { get; set; }
+
+    // Quantas vezes a conferência pediu ajuste nos comprovantes. Também é a rodada atual dos comprovantes.
+    public int RevisoesComprovantes { get; set; }
 
     // FK Ofertante (Quem publicou)
     public int OfertanteId { get; set; }

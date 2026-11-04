@@ -2,21 +2,20 @@ import { useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
+// Só o que o servidor aceita na descrição: negrito, itálico, lista e link.
 const modules = {
     toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
+        ['bold', 'italic'],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image'],
+        ['link'],
         ['clean']
     ],
 };
 
 const formats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
+    'bold', 'italic',
     'list',
-    'link', 'image'
+    'link'
 ];
 
 const RichTextEditor = ({ value, onChange, maxLength = 5000, placeholder = 'Escreva aqui...', onLengthChange }) => {

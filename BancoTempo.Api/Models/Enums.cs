@@ -23,3 +23,9 @@ public enum StatusAtividade
     Validada = 9,              // Comprovantes validados, créditos transferidos ao Ofertante
     Invalida = 10              // Atividade invalidada, créditos devolvidos ao Comprador
 }
+
+public enum FinalidadeAnexo
+{
+    Oferta = 1,       // Material anexado à oferta durante a moderação
+    Comprovante = 2   // Comprovante enviado por quem participa da troca
+}

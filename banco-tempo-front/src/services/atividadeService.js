@@ -1,7 +1,9 @@
 import api from './api';
 
-export const getAtividades = async () => {
-    const response = await api.get('/atividades');
+// A identidade sai do token; nenhuma função envia id de pessoa.
+
+export const getAtividades = async (filtros = {}) => {
+    const response = await api.get('/atividades', { params: filtros });
     return response.data;
 };
 
@@ -10,18 +12,28 @@ export const getAtividadesPendentes = async () => {
     return response.data;
 };
 
+export const getConferencia = async () => {
+    const response = await api.get('/atividades/conferencia');
+    return response.data;
+};
+
 export const getAtividade = async (id) => {
     const response = await api.get(`/atividades/${id}`);
     return response.data;
 };
 
-export const getMinhasOfertas = async (userId) => {
-    const response = await api.get(`/atividades/minhas/${userId}`);
+export const getHistorico = async (id) => {
+    const response = await api.get(`/atividades/${id}/historico`);
     return response.data;
 };
 
-export const getMinhasCompras = async (userId) => {
-    const response = await api.get(`/atividades/minhas-compras/${userId}`);
+export const getMinhasOfertas = async () => {
+    const response = await api.get('/atividades/minhas');
+    return response.data;
+};
+
+export const getMinhasCompras = async () => {
+    const response = await api.get('/atividades/meus-pedidos');
     return response.data;
 };
 
@@ -30,8 +42,9 @@ export const createAtividade = async (atividade) => {
     return response.data;
 };
 
-export const comprarAtividade = async (id, compradorId) => {
-    const response = await api.post(`/atividades/${id}/comprar`, { compradorId });
+// Pedido de ajuda (a rota da API continua /comprar).
+export const comprarAtividade = async (id) => {
+    const response = await api.post(`/atividades/${id}/comprar`);
     return response.data;
 };
 
@@ -55,22 +68,23 @@ export const getAnexos = async (atividadeId) => {
 export const uploadAnexo = async (atividadeId, file) => {
     const formData = new FormData();
     formData.append('arquivo', file);
-    const response = await api.post(`/anexos/${atividadeId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const response = await api.post(`/anexos/${atividadeId}`, formData);
     return response.data;
 };
 
-export const enviarComprovante = async (atividadeId, file, enviadoPorId) => {
-    const formData = new FormData();
-    formData.append('arquivo', file);
-    if (enviadoPorId) {
-        formData.append('enviadoPorId', enviadoPorId);
-    }
-    const response = await api.post(`/anexos/${atividadeId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+export const enviarComprovante = uploadAnexo;
+
+// Baixa com o token e abre o arquivo; o arquivo não tem endereço público.
+export const baixarAnexo = async (anexo) => {
+    const response = await api.get(`/anexos/${anexo.id}/arquivo`, { responseType: 'blob' });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = anexo.nomeArquivo || 'arquivo';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
 export const solicitarCorrecao = async (id, feedback) => {
@@ -83,12 +97,17 @@ export const corrigirAtividade = async (id, atividade) => {
     return response.data;
 };
 
-export const deleteAtividade = async (id, userId) => {
-    const response = await api.delete(`/atividades/${id}?userId=${userId}`);
+export const deleteAtividade = async (id) => {
+    const response = await api.delete(`/atividades/${id}`);
     return response.data;
 };
 
 export const moderacaoFinal = async (id, acao, feedback) => {
     const response = await api.put(`/atividades/${id}/moderacao-final`, { acao, feedback });
+    return response.data;
+};
+
+export const cancelarTroca = async (id, motivo) => {
+    const response = await api.put(`/atividades/${id}/cancelar-troca`, { motivo });
     return response.data;
 };

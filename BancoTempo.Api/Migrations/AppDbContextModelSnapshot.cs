@@ -17,7 +17,7 @@ namespace BancoTempo.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.26")
+                .HasAnnotation("ProductVersion", "8.0.33")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -43,9 +43,15 @@ namespace BancoTempo.Api.Migrations
                     b.Property<int?>("EnviadoPorId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Finalidade")
+                        .HasColumnType("integer");
+
                     b.Property<string>("NomeArquivo")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Rodada")
+                        .HasColumnType("integer");
 
                     b.Property<long>("TamanhoBytes")
                         .HasColumnType("bigint");
@@ -88,11 +94,18 @@ namespace BancoTempo.Api.Migrations
                     b.Property<int?>("DisciplinaId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("FeedbackConferencia")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("FeedbackModeracao")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
                     b.Property<int>("OfertanteId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RevisoesComprovantes")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
@@ -111,7 +124,10 @@ namespace BancoTempo.Api.Migrations
 
                     b.HasIndex("OfertanteId");
 
-                    b.ToTable("Atividades");
+                    b.ToTable("Atividades", t =>
+                        {
+                            t.HasCheckConstraint("CK_Atividades_CustoHoras_Faixa", "\"CustoHoras\" BETWEEN 1 AND 4");
+                        });
                 });
 
             modelBuilder.Entity("BancoTempo.Api.Models.ChatPrivado", b =>
@@ -173,6 +189,61 @@ namespace BancoTempo.Api.Migrations
                     b.HasIndex("CursoId");
 
                     b.ToTable("Disciplinas");
+                });
+
+            modelBuilder.Entity("BancoTempo.Api.Models.EventoSistema", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("AtividadeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("AtorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodigoMotivo")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("DeltaHoras")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HttpStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IdRastreio")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("OcorridoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PapelAtor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("StatusAnterior")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StatusNovo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtividadeId");
+
+                    b.HasIndex("OcorridoEm");
+
+                    b.ToTable("EventosSistema", (string)null);
                 });
 
             modelBuilder.Entity("BancoTempo.Api.Models.MensagemChat", b =>
@@ -241,7 +312,10 @@ namespace BancoTempo.Api.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Usuarios");
+                    b.ToTable("Usuarios", t =>
+                        {
+                            t.HasCheckConstraint("CK_Usuarios_SaldoHoras_NaoNegativo", "\"SaldoHoras\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("BancoTempo.Api.Models.AnexoAtividade", b =>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import { updateByModerador, updateByAdmin } from '../../services/usuarioService';
+import { mensagemDeErro } from '../../services/mensagens';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 
@@ -26,7 +27,7 @@ const UsuarioFormModal = ({ isOpen, onClose, onSuccess, usuario, cursos }) => {
                 email: usuario.email,
                 cursoId: usuario.cursoId || '',
                 tipo: usuario.tipo,
-                saldoHoras: usuario.saldoHoras || 0
+                saldoHoras: usuario.horas ?? 0
             });
         }
     }, [usuario]);
@@ -64,14 +65,14 @@ const UsuarioFormModal = ({ isOpen, onClose, onSuccess, usuario, cursos }) => {
                 };
 
                 await updateByAdmin(usuario.id, adminPayload);
-                updatedFields = adminPayload;
+                updatedFields = { ...adminPayload, horas: adminPayload.saldoHoras };
             } else {
                 // Moderador: só altera o tipo
                 const modPayload = {
                     tipo: parseInt(formData.tipo, 10)
                 };
 
-                await updateByModerador(usuario.id, modPayload, loggedUser.id);
+                await updateByModerador(usuario.id, modPayload);
                 updatedFields = { tipo: modPayload.tipo };
             }
 
@@ -83,9 +84,7 @@ const UsuarioFormModal = ({ isOpen, onClose, onSuccess, usuario, cursos }) => {
                 curso: updatedCurso
             });
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao atualizar usuário.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Não foi possível salvar as mudanças agora.'));
         } finally {
             setLoading(false);
         }

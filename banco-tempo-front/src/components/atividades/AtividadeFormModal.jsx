@@ -4,6 +4,7 @@ import RichTextEditor from '../ui/RichTextEditor';
 import { createAtividade, corrigirAtividade, uploadAnexo } from '../../services/atividadeService';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
+import { mensagemDeErro } from '../../services/mensagens';
 import { AlertCircle } from 'lucide-react';
 
 const TITULO_MAX = 120;
@@ -53,7 +54,8 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                 const payloadCorrecao = {
                     titulo: formData.titulo,
                     descricao: formData.descricao,
-                    custoHoras: parseInt(formData.custoHoras, 10)
+                    custoHoras: parseInt(formData.custoHoras, 10),
+                    disciplinaId: formData.disciplinaId ? parseInt(formData.disciplinaId, 10) : null
                 };
                 atividadeResultado = await corrigirAtividade(atividadeParaCorrigir.id, payloadCorrecao);
                 // Keep ofertante and disciplina from original to avoid missing data in UI
@@ -66,8 +68,7 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                     titulo: formData.titulo,
                     descricao: formData.descricao,
                     custoHoras: parseInt(formData.custoHoras, 10),
-                    disciplinaId: formData.disciplinaId ? parseInt(formData.disciplinaId, 10) : null,
-                    ofertanteId: user.id
+                    disciplinaId: formData.disciplinaId ? parseInt(formData.disciplinaId, 10) : null
                 };
 
                 const novaAtividade = await createAtividade(payload);
@@ -91,16 +92,7 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                 setArquivos([]);
             }
         } catch (error) {
-            const errData = error.response?.data;
-            let msg = 'Erro ao ofertar atividade.';
-            if (typeof errData === 'string') {
-                msg = errData;
-            } else if (errData?.mensagem) {
-                msg = errData.mensagem;
-            } else if (errData?.title) {
-                msg = errData.title;
-            }
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Não foi possível enviar a oferta agora. Tente de novo.'));
         } finally {
             setLoading(false);
         }
@@ -193,6 +185,8 @@ const AtividadeFormModal = ({ isOpen, onClose, onSuccess, disciplinas, atividade
                             type="number"
                             name="custoHoras"
                             min="1"
+                            max="4"
+                            step="1"
                             required
                             value={formData.custoHoras}
                             onChange={handleChange}
