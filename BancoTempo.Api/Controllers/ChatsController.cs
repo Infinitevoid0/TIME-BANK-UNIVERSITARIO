@@ -5,6 +5,7 @@ using BancoTempo.Api.Models;
 using BancoTempo.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace BancoTempo.Api.Controllers
@@ -57,6 +58,7 @@ namespace BancoTempo.Api.Controllers
         }
 
         [HttpPost("{atividadeId:int}/mensagens")]
+        [EnableRateLimiting(LimitesRequisicao.Escrita)]
         public async Task<ActionResult<MensagemDto>> PostMensagem(int atividadeId, [FromBody] EnviarMensagemDto dto)
         {
             var atividade = await _context.Atividades.AsNoTracking().FirstOrDefaultAsync(a => a.Id == atividadeId);

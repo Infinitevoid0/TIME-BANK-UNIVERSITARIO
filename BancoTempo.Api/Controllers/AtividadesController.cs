@@ -5,6 +5,7 @@ using BancoTempo.Api.Models;
 using BancoTempo.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace BancoTempo.Api.Controllers
@@ -139,6 +140,7 @@ namespace BancoTempo.Api.Controllers
         }
 
         [HttpPost]
+        [EnableRateLimiting(LimitesRequisicao.Escrita)]
         public async Task<ActionResult<AtividadeDto>> PostAtividade(AtividadeCreateDto dto)
         {
             var validacao = await ValidarOfertaAsync(dto.Titulo, dto.Descricao, dto.CustoHoras, dto.DisciplinaId);
@@ -206,6 +208,7 @@ namespace BancoTempo.Api.Controllers
 
         // POST /api/atividades/{id}/comprar: pedido de ajuda. A identidade vem do token.
         [HttpPost("{id:int}/comprar")]
+        [EnableRateLimiting(LimitesRequisicao.Escrita)]
         public async Task<IActionResult> ComprarAtividade(int id)
         {
             var resultado = await _transicoes.PedirAsync(id, User);

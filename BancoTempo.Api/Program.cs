@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using BancoTempo.Api.Data;
 using BancoTempo.Api.Infra;
 using BancoTempo.Api.Models;
@@ -9,6 +10,8 @@ using BancoTempo.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +21,7 @@ var ehDesenvolvimento = builder.Environment.IsDevelopment();
 
 var opcoesBancoTempo = builder.Configuration.GetSection("BancoTempo").Get<OpcoesBancoTempo>() ?? new OpcoesBancoTempo();
 var opcoesJwt = builder.Configuration.GetSection("Jwt").Get<OpcoesJwt>() ?? new OpcoesJwt();
+var opcoesLimite = builder.Configuration.GetSection("LimiteRequisicoes").Get<OpcoesLimiteRequisicoes>() ?? new OpcoesLimiteRequisicoes();
 builder.Services.AddSingleton(opcoesBancoTempo);
 builder.Services.AddSingleton(opcoesJwt);
 
@@ -137,11 +141,63 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<RegistroEventos>();
+builder.Services.AddSingleton<RegistroLimiteExcedido>();
+
+// IP real atrás do nginx (que já resolve o CF-Connecting-IP do túnel). A API não tem porta publicada,
+// então o único remetente possível do cabeçalho é o próprio nginx da rede interna.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.ForwardLimit = 1;
+});
+
+// Limites: a turma inteira sai pelo mesmo IP, então quem está logado conta por pessoa e só o anônimo conta por IP.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+    {
+        var id = http.User.IdPessoaOuNulo();
+        return id is not null
+            ? RateLimitPartition.GetFixedWindowLimiter($"pessoa:{id}", _ => JanelaDeUmMinuto(opcoesLimite.GeralPorMinutoPorPessoa))
+            : RateLimitPartition.GetFixedWindowLimiter($"ip:{http.Connection.RemoteIpAddress}", _ => JanelaDeUmMinuto(opcoesLimite.AnonimoPorMinutoPorIp));
+    });
+    // Criação de oferta, pedido e mensagem: um balde por pessoa para cada tipo de criação.
+    options.AddPolicy(LimitesRequisicao.Escrita, http =>
+    {
+        var id = http.User.IdPessoaOuNulo()?.ToString() ?? $"ip:{http.Connection.RemoteIpAddress}";
+        var caminho = http.Request.Path.Value ?? string.Empty;
+        var tipo = caminho.EndsWith("/mensagens") ? "mensagem" : caminho.EndsWith("/comprar") ? "pedido" : "oferta";
+        return RateLimitPartition.GetFixedWindowLimiter($"{tipo}:{id}", _ => JanelaDeUmMinuto(opcoesLimite.EscritaPorMinutoPorPessoa));
+    });
+    options.OnRejected = async (contexto, cancelamento) =>
+    {
+        var segundos = contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera)
+            ? Math.Max(1, (int)Math.Ceiling(espera.TotalSeconds))
+            : 60;
+        contexto.HttpContext.Response.Headers.RetryAfter = segundos.ToString();
+        await contexto.HttpContext.RequestServices.GetRequiredService<RegistroLimiteExcedido>().RegistrarAsync(contexto.HttpContext);
+        await Problemas.EscreverAsync(contexto.HttpContext, 429, Codigos.LimiteExcedido,
+            $"Muitas ações em pouco tempo. Espere {segundos} segundos e tente de novo.");
+    };
+});
+
+static FixedWindowRateLimiterOptions JanelaDeUmMinuto(int limite) => new()
+{
+    PermitLimit = Math.Max(1, limite),
+    Window = TimeSpan.FromMinutes(1),
+    QueueLimit = 0,
+    AutoReplenishment = true,
+};
 builder.Services.AddSingleton<SanitizadorHtml>();
 builder.Services.AddSingleton<ArmazenamentoAnexos>();
 builder.Services.AddScoped<TransicoesAtividade>();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -171,6 +227,7 @@ if (ehDesenvolvimento)
 }
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
