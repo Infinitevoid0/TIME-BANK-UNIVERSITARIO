@@ -2,12 +2,11 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import LoginPage from './components/auth/LoginPage';
 import CadastroPage from './components/auth/CadastroPage';
-import AtividadesPage from './components/atividades/AtividadesPage';
 import AtividadeDetalhesPage from './components/atividades/AtividadeDetalhesPage';
 import ExplorarPage from './pages/ExplorarPage';
 import OferecerPage from './pages/OferecerPage';
 import PedirAjudaPage from './pages/PedirAjudaPage';
-import MinhasAtividadesPage from './components/minhas-atividades/MinhasAtividadesPage';
+import MinhasHorasPage from './pages/MinhasHorasPage';
 import ModeracaoPage from './components/moderacao/ModeracaoPage';
 import ModeracaoDetalhesPage from './components/moderacao/ModeracaoDetalhesPage';
 import UsuariosPage from './components/usuarios/UsuariosPage';
@@ -57,7 +56,7 @@ function App() {
         <Route path="/oferecer" element={protegida(<OferecerPage />)} />
         <Route path="/trocas/:id/corrigir" element={protegida(<OferecerPage />)} />
         <Route path="/pedir-ajuda" element={protegida(<PedirAjudaPage />)} />
-        <Route path="/minhas-horas" element={protegida(<MinhasAtividadesPage />)} />
+        <Route path="/minhas-horas" element={protegida(<MinhasHorasPage />)} />
         <Route path="/trocas/:id" element={protegida(<AtividadeDetalhesPage />)} />
         <Route path="/chat/:atividadeId" element={protegida(<ChatPage />)} />
         <Route path="/perfil" element={protegida(<PerfilPage />)} />
