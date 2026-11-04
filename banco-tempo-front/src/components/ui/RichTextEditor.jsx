@@ -1,62 +1,50 @@
-import { useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { textoPlanoDoHtml } from '../../services/formatos';
 
 // Só o que o servidor aceita na descrição: negrito, itálico, lista e link.
 const modules = {
     toolbar: [
         ['bold', 'italic'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
         ['link'],
-        ['clean']
+        ['clean'],
     ],
 };
 
-const formats = [
-    'bold', 'italic',
-    'list',
-    'link'
-];
+const formats = ['bold', 'italic', 'list', 'link'];
 
-const RichTextEditor = ({ value, onChange, maxLength = 5000, placeholder = 'Escreva aqui...', onLengthChange }) => {
-    const quillRef = useRef(null);
-
-    // Usa o getText() do próprio Quill — a mesma fonte de verdade do editor.
-    // Quill adiciona um \n ao final, por isso subtraímos 1.
-    const getQuillTextLength = () => {
-        const editor = quillRef.current?.getEditor();
-        if (!editor) return 0;
-        const text = editor.getText();
-        return Math.max(0, text.length - 1);
-    };
-
-    const charCount = getQuillTextLength();
-    const isOverLimit = charCount > maxLength;
+const RichTextEditor = ({
+    value,
+    onChange,
+    onBlur,
+    maxLength = 5000,
+    placeholder = 'Escreva aqui...',
+    onLengthChange,
+    invalido = false,
+}) => {
+    const charCount = textoPlanoDoHtml(value).length;
+    const acimaDoLimite = charCount > maxLength;
 
     const handleChange = (html) => {
         onChange(html);
-        // Notifica o pai com o comprimento real do texto para validação consistente
         if (onLengthChange) {
-            const editor = quillRef.current?.getEditor();
-            if (editor) {
-                const text = editor.getText();
-                onLengthChange(Math.max(0, text.length - 1));
-            }
+            onLengthChange(textoPlanoDoHtml(html).length);
         }
     };
 
     return (
-        <div>
+        <div className={invalido || acimaDoLimite ? 'editor-invalido' : ''}>
             <ReactQuill
-                ref={quillRef}
                 theme="snow"
                 value={value}
                 onChange={handleChange}
+                onBlur={onBlur}
                 modules={modules}
                 formats={formats}
                 placeholder={placeholder}
             />
-            <div className={`mt-1 text-xs text-right ${isOverLimit ? 'text-red-600 font-semibold' : charCount > maxLength * 0.9 ? 'text-orange-500' : 'text-gray-400'}`}>
+            <div className={`mt-1 text-right text-sm ${acimaDoLimite ? 'font-bold text-erro' : 'text-texto-suave'}`}>
                 {charCount}/{maxLength} caracteres
             </div>
         </div>

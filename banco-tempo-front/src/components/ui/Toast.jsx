@@ -1,34 +1,34 @@
-import { CheckCircle, Info, XCircle, X } from 'lucide-react';
 import { useEffect } from 'react';
+import { CircleCheck, CircleAlert, Info, X } from 'lucide-react';
+
+const DURACAO_MS = 5000;
+
+const ICONES = {
+    success: <CircleCheck className="w-5 h-5 text-concluido" aria-hidden="true" />,
+    error: <CircleAlert className="w-5 h-5 text-texto" aria-hidden="true" />,
+    info: <Info className="w-5 h-5 text-texto-suave" aria-hidden="true" />,
+};
 
 const Toast = ({ message, type, id, removeToast }) => {
     useEffect(() => {
-        const timer = setTimeout(() => {
-            removeToast(id);
-        }, 4000);
+        const timer = setTimeout(() => removeToast(id), DURACAO_MS);
         return () => clearTimeout(timer);
     }, [id, removeToast]);
 
-    const icons = {
-        success: <CheckCircle className="text-green-500 w-5 h-5" />,
-        error: <XCircle className="text-red-500 w-5 h-5" />,
-        info: <Info className="text-blue-500 w-5 h-5" />,
-    };
-
-    const borders = {
-        success: 'border-green-500',
-        error: 'border-red-500',
-        info: 'border-blue-500',
-    };
-
     return (
-        <div className={`flex items-center justify-between w-80 p-4 mb-4 bg-white border-l-4 rounded-r shadow-lg ${borders[type]} animate-slide-in`}>
-            <div className="flex items-center">
-                {icons[type]}
-                <p className="ml-3 text-sm font-medium text-gray-700">{message}</p>
-            </div>
-            <button onClick={() => removeToast(id)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-4 h-4" />
+        <div
+            role={type === 'error' ? 'alert' : 'status'}
+            className="toast-entrada flex items-start gap-3 rounded-painel border border-borda bg-superficie py-2 pl-4 pr-1 shadow-elevada"
+        >
+            <span className="pt-2.5">{ICONES[type] || ICONES.info}</span>
+            <p className="flex-1 py-2">{message}</p>
+            <button
+                type="button"
+                onClick={() => removeToast(id)}
+                aria-label="Fechar aviso"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-campo text-texto-suave hover:bg-fundo hover:text-texto"
+            >
+                <X className="w-5 h-5" aria-hidden="true" />
             </button>
         </div>
     );

@@ -1,0 +1,77 @@
+/* Tokens do modo claro (DESIGN.md). Só o modo claro existe nesta versão. */
+:root {
+  --fundo: #F3F6FA;
+  --superficie: #FFFFFF;
+  --texto: #0F1E33;
+  --texto-suave: #44546A;
+  --borda: #C5D1E0;
+  --borda-campo: #6B7F99;
+  --destaque: #00478F;
+  --destaque-fundo: #00478F;
+  --sobre-destaque: #FFFFFF;
+  --destaque-hover: #00326A;
+  --destaque-tenue: #E8F0FA;
+  --hora: #FEE300;
+  --sobre-hora: #0F1E33;
+  --foco: #00478F;
+
+  /* Fundo neutro azulado para blocos de apoio (mensagens próprias, caixas de aviso). */
+  --neutro: #E6EDF6;
+
+  --status-aguardando-texto: #6B4F00;
+  --status-aguardando-fundo: #FFF3B0;
+  --status-aceito-texto: #00478F;
+  --status-aceito-fundo: #DCE8F7;
+  --status-concluido-texto: #00692F;
+  --status-concluido-fundo: #DAF1E2;
+  --status-cancelado-texto: #44546A;
+  --status-cancelado-fundo: #E8ECF2;
+  --erro-texto: #B3150F;
+  --erro-fundo: #FDE6E4;
+
+  --sombra-elevada: 0 8px 24px rgba(23, 37, 46, 0.14);
+  --raio-campo: 6px;
+  --raio-painel: 12px;
+  --duracao: 180ms;
+  --duracao-dialogo: 220ms;
+  --curva: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-borda: var(--borda);
+  --color-borda-campo: var(--borda-campo);
+  --color-destaque: var(--destaque);
+  --color-destaque-fundo: var(--destaque-fundo);
+  --color-sobre-destaque: var(--sobre-destaque);
+  --color-destaque-hover: var(--destaque-hover);
+  --color-destaque-tenue: var(--destaque-tenue);
+  --color-hora: var(--hora);
+  --color-sobre-hora: var(--sobre-hora);
+  --color-foco: var(--foco);
+  --color-neutro: var(--neutro);
+  --color-aguardando: var(--status-aguardando-texto);
+  --color-aguardando-fundo: var(--status-aguardando-fundo);
+  --color-aceito: var(--status-aceito-texto);
+  --color-aceito-fundo: var(--status-aceito-fundo);
+  --color-concluido: var(--status-concluido-texto);
+  --color-concluido-fundo: var(--status-concluido-fundo);
+  --color-cancelado: var(--status-cancelado-texto);
+  --color-cancelado-fundo: var(--status-cancelado-fundo);
+  --color-erro: var(--erro-texto);
+  --color-erro-fundo: var(--erro-fundo);
+
+  --font-titulo: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --font-corpo: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+
+  --radius-campo: var(--raio-campo);
+  --radius-painel: var(--raio-painel);
+
+  --shadow-elevada: var(--sombra-elevada);
+
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
+}

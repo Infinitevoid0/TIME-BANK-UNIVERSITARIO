@@ -1,115 +1,97 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { CircleAlert } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useToast } from '../../hooks/useToast';
-import { Clock } from 'lucide-react';
+import Campo from '../ui/Campo';
+import TelaDeEntrada from './TelaDeEntrada';
+
+const ehInstitucional = (email) => email.endsWith('@ufsc.br') || email.endsWith('@grad.ufsc.br');
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
+    const [erros, setErros] = useState({});
+    const [erroLogin, setErroLogin] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
-    const toast = useToast();
     const [params] = useSearchParams();
     const sessaoEncerrada = params.get('sessao') === 'encerrada';
 
+    const validarEmail = (valor) => {
+        const limpo = valor.trim().toLowerCase();
+        if (!limpo) return 'Informe seu e-mail da UFSC.';
+        if (!ehInstitucional(limpo)) return 'Use o e-mail institucional, que termina em @grad.ufsc.br ou @ufsc.br.';
+        return '';
+    };
+    const validarSenha = (valor) => (valor ? '' : 'Informe sua senha.');
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        const emailLimpo = email.trim().toLowerCase();
-        if (!emailLimpo.endsWith('@ufsc.br') && !emailLimpo.endsWith('@grad.ufsc.br')) {
-            toast.error('Use seu e-mail institucional (@grad.ufsc.br ou @ufsc.br).');
+        const novos = { email: validarEmail(email), senha: validarSenha(senha) };
+        setErros(novos);
+        setErroLogin('');
+        if (novos.email || novos.senha) {
+            document.getElementById(novos.email ? 'login-email' : 'login-senha')?.focus();
             return;
         }
 
-        if (!senha) {
-             toast.error('A senha é obrigatória.');
-             return;
-        }
-
         setLoading(true);
-        try {
-            await login(email.trim().toLowerCase(), senha);
-        } finally {
+        const erro = await login(email.trim().toLowerCase(), senha);
+        if (erro) {
+            setErroLogin(erro);
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="bg-white p-8 rounded-2xl shadow-xl space-y-8 max-w-md w-full border border-gray-100">
-                <div className="text-center">
-                    <div className="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
-                        <Clock className="w-6 h-6" />
-                    </div>
-                    <p className="text-sm text-gray-600">
-                        Bem-vindo ao Banco de Tempo UFSC
-                    </p>
-                    <h2 className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
-                        Acesse sua conta
-                    </h2>
-                </div>
-                
-                {sessaoEncerrada && (
-                    <p role="status" className="rounded-md border border-gray-300 bg-gray-50 p-3 text-sm text-gray-800">
-                        Sua sessão terminou. Entre de novo para continuar.
+        <TelaDeEntrada>
+            <h1>Entrar</h1>
+            <p className="mt-2 text-texto-suave">Use o e-mail da UFSC e a senha que você criou no cadastro.</p>
+
+            {sessaoEncerrada && (
+                <p role="status" className="mt-4 rounded-campo border border-borda bg-neutro p-3">
+                    Sua sessão terminou. Entre de novo para continuar.
+                </p>
+            )}
+
+            <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
+                <Campo id="login-email" rotulo="E-mail institucional" erro={erros.email}>
+                    <input
+                        type="email"
+                        autoComplete="email"
+                        className="campo"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onBlur={() => email && setErros((p) => ({ ...p, email: validarEmail(email) }))}
+                    />
+                </Campo>
+                <Campo id="login-senha" rotulo="Senha" erro={erros.senha}>
+                    <input
+                        type="password"
+                        autoComplete="current-password"
+                        className="campo"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                    />
+                </Campo>
+
+                {erroLogin && (
+                    <p role="alert" className="erro-campo rounded-campo bg-erro-fundo p-3">
+                        <CircleAlert className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                        <span>{erroLogin}</span>
                     </p>
                 )}
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4 rounded-md">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email Institucional
-                            </label>
-                            <input
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors sm:text-sm"
-                                placeholder="aluno@grad.ufsc.br"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Senha
-                            </label>
-                            <input
-                                type="password"
-                                required
-                                value={senha}
-                                onChange={(e) => setSenha(e.target.value)}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors sm:text-sm"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                    </div>
+                <button type="submit" disabled={loading} className="botao-primario w-full">
+                    {loading ? 'Entrando...' : 'Entrar'}
+                </button>
+            </form>
 
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                            {loading ? (
-                                <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                </span>
-                            ) : null}
-                            {loading ? 'Entrando...' : 'Entrar'}
-                        </button>
-                    </div>
-                </form>
-
-                <p className="text-center text-sm text-gray-600">
-                    Não tem uma conta?{' '}
-                    <Link to="/cadastro" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                        Cadastre-se
-                    </Link>
-                </p>
-            </div>
-        </div>
+            <p className="mt-6">
+                Ainda não tem conta?{' '}
+                <Link to="/cadastro" className="font-bold underline underline-offset-2">Criar conta</Link>
+            </p>
+        </TelaDeEntrada>
     );
 };
 

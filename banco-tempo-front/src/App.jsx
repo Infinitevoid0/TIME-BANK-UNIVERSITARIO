@@ -1,10 +1,12 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import LoginPage from './components/auth/LoginPage';
 import CadastroPage from './components/auth/CadastroPage';
-import AtividadesPage from './components/atividades/AtividadesPage';
 import AtividadeDetalhesPage from './components/atividades/AtividadeDetalhesPage';
-import MinhasAtividadesPage from './components/minhas-atividades/MinhasAtividadesPage';
+import ExplorarPage from './pages/ExplorarPage';
+import OferecerPage from './pages/OferecerPage';
+import PedirAjudaPage from './pages/PedirAjudaPage';
+import MinhasHorasPage from './pages/MinhasHorasPage';
 import ModeracaoPage from './components/moderacao/ModeracaoPage';
 import ModeracaoDetalhesPage from './components/moderacao/ModeracaoDetalhesPage';
 import UsuariosPage from './components/usuarios/UsuariosPage';
@@ -18,8 +20,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   if (carregando) {
     return (
       <div className="flex justify-center mt-20" role="status">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-        <span className="sr-only">Carregando sua conta</span>
+        <span className="text-texto-suave">Carregando sua conta...</span>
       </div>
     );
   }
@@ -29,85 +30,44 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   }
 
   if (requiredRole && user.tipo < requiredRole) {
-    return <Navigate to="/atividades" replace />;
+    return <Navigate to="/explorar" replace />;
   }
 
   return children;
 };
+
+// Endereços antigos continuam funcionando para quem guardou o link.
+const RedirecionaTroca = () => {
+  const { id, atividadeId } = useParams();
+  return <Navigate to={`/trocas/${id ?? atividadeId}`} replace />;
+};
+
+const protegida = (elemento, papel) => <ProtectedRoute requiredRole={papel}>{elemento}</ProtectedRoute>;
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<CadastroPage />} />
-      <Route path="/" element={<Navigate to="/atividades" replace />} />
-      
+      <Route path="/" element={<Navigate to="/explorar" replace />} />
+
       <Route element={<Layout />}>
-        <Route 
-          path="/atividades" 
-          element={
-            <ProtectedRoute>
-              <AtividadesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/atividades/:id" 
-          element={
-            <ProtectedRoute>
-              <AtividadeDetalhesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/minhas-atividades" 
-          element={
-            <ProtectedRoute>
-              <MinhasAtividadesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/perfil" 
-          element={
-            <ProtectedRoute>
-              <PerfilPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/chat/:atividadeId" 
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/moderacao"  
-          element={
-            <ProtectedRoute requiredRole={2}>
-              <ModeracaoPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/moderacao/:id" 
-          element={
-            <ProtectedRoute requiredRole={2}>
-              <ModeracaoDetalhesPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/usuarios" 
-          element={
-            <ProtectedRoute requiredRole={2}>
-              <UsuariosPage />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/explorar" element={protegida(<ExplorarPage />)} />
+        <Route path="/oferecer" element={protegida(<OferecerPage />)} />
+        <Route path="/trocas/:id/corrigir" element={protegida(<OferecerPage />)} />
+        <Route path="/pedir-ajuda" element={protegida(<PedirAjudaPage />)} />
+        <Route path="/minhas-horas" element={protegida(<MinhasHorasPage />)} />
+        <Route path="/trocas/:id" element={protegida(<AtividadeDetalhesPage />)} />
+        <Route path="/chat/:atividadeId" element={protegida(<ChatPage />)} />
+        <Route path="/perfil" element={protegida(<PerfilPage />)} />
+        <Route path="/moderacao" element={protegida(<ModeracaoPage />, 2)} />
+        <Route path="/moderacao/:id" element={protegida(<ModeracaoDetalhesPage />, 2)} />
+        <Route path="/usuarios" element={protegida(<UsuariosPage />, 2)} />
       </Route>
+
+      <Route path="/atividades" element={<Navigate to="/explorar" replace />} />
+      <Route path="/atividades/:id" element={<RedirecionaTroca />} />
+      <Route path="/minhas-atividades" element={<Navigate to="/minhas-horas" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
