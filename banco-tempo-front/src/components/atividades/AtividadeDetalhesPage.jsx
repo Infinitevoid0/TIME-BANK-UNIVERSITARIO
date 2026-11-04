@@ -1,166 +1,259 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos, comprarAtividade, baixarAnexo } from '../../services/atividadeService';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, BookOpen, Calendar, Download, MessageSquare, Paperclip, PencilLine, ShieldCheck } from 'lucide-react';
+import { baixarAnexo, getAnexos, getAtividade, getHistorico } from '../../services/atividadeService';
+import { formatarData } from '../../services/formatos';
 import { mensagemDeErro } from '../../services/mensagens';
-import DescricaoSegura from '../ui/DescricaoSegura';
-import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
-import { ArrowLeft, Clock, BookOpen, User, Paperclip, Download, Calendar, ShoppingCart } from 'lucide-react';
-
-const getStatusBadge = (status) => {
-    switch (status) {
-        case 1: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">Pendente</span>;
-        case 2: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">Aprovada</span>;
-        case 3: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">Recusada</span>;
-        case 4: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">Necessita Correção</span>;
-        case 5: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">Pendente (Corrigida)</span>;
-        case 6: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">Em Execução</span>;
-        case 7: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">Aguardando Validação</span>;
-        case 8: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">Necessita Revisão</span>;
-        case 9: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">Validada</span>;
-        case 10: return <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">Inválida</span>;
-        default: return null;
-    }
-};
+import { useToast } from '../../hooks/useToast';
+import Avatar from '../ui/Avatar';
+import ChipHoras from '../ui/ChipHoras';
+import ChipStatus from '../ui/ChipStatus';
+import DescricaoSegura from '../ui/DescricaoSegura';
+import { Carregando, ErroCarregar } from '../ui/Estados';
+import LinhaDoTempo from '../features/LinhaDoTempo';
+import DialogoConfirmarPedido from '../features/DialogoConfirmarPedido';
 
 const AtividadeDetalhesPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [atividade, setAtividade] = useState(null);
-    const [anexos, setAnexos] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingCompra, setLoadingCompra] = useState(false);
     const toast = useToast();
-    const { user, recarregarUsuario } = useAuth();
+    const { user, isModerador } = useAuth();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await getAtividade(id);
-                setAtividade(data);
-                try {
-                    const anexosData = await getAnexos(id);
-                    setAnexos(anexosData);
-                } catch { /* Sem anexos */ }
-            } catch (error) {
-                toast.error(mensagemDeErro(error, 'Não encontramos esta atividade.'));
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
+    const [estado, setEstado] = useState({
+        carregando: true,
+        erro: '',
+        atividade: null,
+        anexos: [],
+        historico: [],
+    });
+    const [confirmandoPedido, setConfirmandoPedido] = useState(false);
+
+    const carregar = useCallback(async () => {
+        setEstado((atual) => ({ ...atual, carregando: true, erro: '' }));
+        try {
+            const atividade = await getAtividade(id);
+            const [anexos, historico] = await Promise.all([
+                getAnexos(id).catch(() => []),
+                getHistorico(id).catch(() => []),
+            ]);
+            setEstado({
+                carregando: false,
+                erro: '',
+                atividade,
+                anexos: anexos || [],
+                historico: historico || [],
+            });
+        } catch (e) {
+            setEstado({
+                carregando: false,
+                erro: mensagemDeErro(e, 'Não foi possível carregar os detalhes agora.'),
+                atividade: null,
+                anexos: [],
+                historico: [],
+            });
+        }
     }, [id]);
 
-    const handleComprar = async () => {
-        // Sem checagem local de horas: o servidor decide e a tentativa fica registrada como evento.
-        setLoadingCompra(true);
-        try {
-            await comprarAtividade(atividade.id);
-            toast.success('Pedido feito. Suas horas ficam reservadas até a troca ser concluída.');
-            await recarregarUsuario();
-            navigate(`/chat/${atividade.id}`);
-        } catch (error) {
-            toast.error(mensagemDeErro(error, 'Não foi possível fazer o pedido agora. Tente de novo.'));
-            await recarregarUsuario();
-            setLoadingCompra(false);
-        }
-    };
+    useEffect(() => {
+        carregar();
+    }, [carregar]);
 
-    if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
-    if (!atividade) return <div className="text-center mt-20 text-gray-500">Atividade não encontrada.</div>;
+    if (estado.carregando) {
+        return <Carregando texto="Carregando detalhes" linhas={3} />;
+    }
+
+    if (estado.erro || !estado.atividade) {
+        return (
+            <div className="max-w-[42.5rem] space-y-4">
+                <Link to="/explorar" className="botao-terciario">
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar para Explorar
+                </Link>
+                <ErroCarregar mensagem={estado.erro || 'Oferta ou troca não encontrada.'} aoTentar={carregar} />
+            </div>
+        );
+    }
+
+    const { atividade, anexos, historico } = estado;
+    const souOfertante = user?.id === atividade.ofertanteId;
+    const souComprador = atividade.compradorId != null && user?.id === atividade.compradorId;
+    const souParticipante = souOfertante || souComprador;
+    const podePedir = atividade.status === 2 && user && !souOfertante;
+    const podeConversar = atividade.status >= 6 && atividade.status <= 10 && (souParticipante || isModerador);
+    const podeModerar =
+        isModerador &&
+        !souParticipante &&
+        [1, 5, 6, 7, 8].includes(atividade.status);
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <button onClick={() => navigate(-1)} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Voltar
-            </button>
+        <div className="max-w-[42.5rem] space-y-6">
+            <div>
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="botao-terciario"
+                >
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar
+                </button>
+            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-100">
-                    <div className="flex items-start justify-between">
-                        <h1 className="text-2xl font-bold text-gray-900">{atividade.titulo}</h1>
-                        <div className="flex flex-col items-end gap-2">
-                            {getStatusBadge(atividade.status)}
-                            {atividade.status === 2 && user && user.id !== atividade.ofertanteId && (
-                                <button
-                                    onClick={handleComprar}
-                                    disabled={loadingCompra}
-                                    className="mt-2 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-70 transition-colors shadow-sm"
-                                >
-                                    {loadingCompra ? (
-                                        <div className="w-4 h-4 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <ShoppingCart className="w-4 h-4 mr-2" />
-                                    )}
-                                    Comprar Atividade
-                                </button>
-                            )}
+            <section className="painel p-5 sm:p-6 space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <h1 className="break-words">{atividade.titulo}</h1>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <ChipHoras horas={atividade.custoHoras} />
+                        <ChipStatus status={atividade.status} />
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-texto-suave">
+                    {atividade.disciplina && (
+                        <span className="inline-flex items-center gap-1.5">
+                            <BookOpen className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            Disciplina: <strong className="text-texto">{atividade.disciplina.nome}</strong>
+                        </span>
+                    )}
+                    {atividade.dataCriacao && (
+                        <span className="inline-flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            Publicada em {formatarData(atividade.dataCriacao)}
+                        </span>
+                    )}
+                </div>
+
+                <dl className="grid gap-3 border-t border-borda pt-4 sm:grid-cols-2">
+                    <div className="flex items-center gap-3 rounded-campo border border-borda bg-fundo p-3">
+                        <Avatar nome={atividade.ofertante?.nome || 'Colega'} />
+                        <div className="min-w-0">
+                            <dt className="text-sm text-texto-suave">Quem oferece</dt>
+                            <dd className="font-bold truncate">
+                                {atividade.ofertante?.nome || 'Colega'}
+                                {souOfertante ? ' (você)' : ''}
+                            </dd>
                         </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                            {atividade.custoHoras} hora{atividade.custoHoras > 1 ? 's' : ''}
-                        </div>
-                        {atividade.disciplina && (
-                            <div className="flex items-center">
-                                <BookOpen className="w-4 h-4 mr-1.5 text-gray-400" />
-                                {atividade.disciplina.nome}
+                    {atividade.comprador && (
+                        <div className="flex items-center gap-3 rounded-campo border border-borda bg-fundo p-3">
+                            <Avatar nome={atividade.comprador?.nome || 'Colega'} />
+                            <div className="min-w-0">
+                                <dt className="text-sm text-texto-suave">Quem pediu</dt>
+                                <dd className="font-bold truncate">
+                                    {atividade.comprador?.nome || 'Colega'}
+                                    {souComprador ? ' (você)' : ''}
+                                </dd>
                             </div>
-                        )}
-                        <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                            {new Date(atividade.dataCriacao).toLocaleDateString()}
                         </div>
-                    </div>
-                </div>
+                    )}
+                </dl>
 
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Ofertante</h3>
-                    <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
-                            <User className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-900">{atividade.ofertante?.nome || 'N/A'}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Descrição</h3>
+                <div className="border-t border-borda pt-4 space-y-2">
+                    <h2 className="text-xl">O que está incluído</h2>
                     <DescricaoSegura
                         html={atividade.descricao}
-                        className="text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
+                        className="descricao-rica text-texto max-w-[70ch]"
                     />
                 </div>
 
-                {anexos.length > 0 && (
-                    <div className="p-6">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                            <Paperclip className="w-4 h-4 inline mr-1" />
-                            Documentos Anexados
-                        </h3>
-                        <ul className="space-y-2">
-                            {anexos.map(anexo => (
-                                <li key={anexo.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <span className="text-sm text-gray-700 truncate">{anexo.nomeArquivo}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => baixarAnexo(anexo).catch((e) => toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.')))}
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none"
-                                    >
-                                        <Download className="w-4 h-4 mr-1" aria-hidden="true" />
-                                        Baixar
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                {(podePedir || podeConversar || (souOfertante && atividade.status === 4) || podeModerar) && (
+                    <div className="flex flex-wrap items-center gap-3 border-t border-borda pt-4">
+                        {podePedir && (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmandoPedido(true)}
+                                className="botao-primario"
+                            >
+                                Pedir esta ajuda
+                            </button>
+                        )}
+
+                        {souOfertante && atividade.status === 4 && (
+                            <Link to={`/trocas/${atividade.id}/corrigir`} className="botao-primario">
+                                <PencilLine className="w-4 h-4" aria-hidden="true" />
+                                Ajustar oferta
+                            </Link>
+                        )}
+
+                        {podeConversar && (
+                            <Link to={`/chat/${atividade.id}`} className="botao-primario">
+                                <MessageSquare className="w-4 h-4" aria-hidden="true" />
+                                Conversa e comprovantes
+                            </Link>
+                        )}
+
+                        {podeModerar && (
+                            <Link to={`/moderacao/${atividade.id}`} className="botao-secundario">
+                                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+                                Abrir na moderação
+                            </Link>
+                        )}
                     </div>
                 )}
-            </div>
+            </section>
+
+            <LinhaDoTempo
+                atividade={atividade}
+                historico={historico}
+                anexos={anexos}
+                euId={user?.id}
+            />
+
+            {anexos.length > 0 && (
+                <section aria-labelledby="titulo-anexos" className="painel p-5 sm:p-6 space-y-3">
+                    <h2 id="titulo-anexos" className="text-xl">
+                        Arquivos anexados
+                    </h2>
+                    <ul className="divide-y divide-borda rounded-campo border border-borda">
+                        {anexos.map((anexo) => (
+                            <li
+                                key={anexo.id}
+                                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <div className="min-w-0">
+                                    <p className="inline-flex items-center gap-2 font-semibold break-all">
+                                        <Paperclip className="w-4 h-4 shrink-0 text-texto-suave" aria-hidden="true" />
+                                        {anexo.nomeArquivo}
+                                    </p>
+                                    <p className="text-sm text-texto-suave">
+                                        {anexo.finalidade === 1
+                                            ? 'Material da oferta'
+                                            : anexo.enviadoPorId === user?.id
+                                              ? 'Comprovante que você enviou'
+                                              : 'Comprovante enviado na troca'}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        baixarAnexo(anexo).catch((e) =>
+                                            toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.'))
+                                        )
+                                    }
+                                    className="botao-secundario"
+                                >
+                                    <Download className="w-4 h-4" aria-hidden="true" />
+                                    Baixar arquivo
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+
+            <DialogoConfirmarPedido
+                oferta={confirmandoPedido ? atividade : null}
+                aoFechar={() => setConfirmandoPedido(false)}
+                aoConcluir={() => {
+                    setConfirmandoPedido(false);
+                    navigate(`/chat/${atividade.id}`);
+                }}
+                aoConflito={() => {
+                    setConfirmandoPedido(false);
+                    carregar();
+                }}
+            />
         </div>
     );
 };
