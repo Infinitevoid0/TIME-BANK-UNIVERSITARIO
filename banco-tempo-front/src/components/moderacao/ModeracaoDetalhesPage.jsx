@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, Check, Download, Paperclip, PencilLine } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, Download, Paperclip, PencilLine, Trash2 } from 'lucide-react';
 import {
     baixarAnexo,
     cancelarTroca,
+    deleteAnexo,
     getAnexos,
     getAtividade,
     moderacaoFinal,
@@ -32,6 +33,7 @@ const ModeracaoDetalhesPage = () => {
     const [loading, setLoading] = useState(true);
     const [erro, setErro] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
+    const [removendoId, setRemovendoId] = useState(null);
 
     // Diálogo ativo: 'correcao' | 'revisao' | 'reprovar' | 'invalidar' | 'cancelar' | null
     const [dialogo, setDialogo] = useState(null);
@@ -56,6 +58,20 @@ const ModeracaoDetalhesPage = () => {
     useEffect(() => {
         carregar();
     }, [carregar]);
+
+    const handleRemoverAnexo = async (anexo) => {
+        setRemovendoId(anexo.id);
+        try {
+            await deleteAnexo(anexo.id);
+            toast.success('Arquivo removido.');
+            const anexosData = await getAnexos(id).catch(() => []);
+            setAnexos(anexosData || []);
+        } catch (error) {
+            toast.error(mensagemDeErro(error, 'Não foi possível remover o arquivo.'));
+        } finally {
+            setRemovendoId(null);
+        }
+    };
 
     const handleAprovar = async () => {
         setActionLoading(true);
@@ -244,20 +260,31 @@ const ModeracaoDetalhesPage = () => {
                                                 : ''}
                                         </p>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            baixarAnexo(anexo).catch((e) =>
-                                                toast.error(
-                                                    mensagemDeErro(e, 'Não foi possível baixar o arquivo.')
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                baixarAnexo(anexo).catch((e) =>
+                                                    toast.error(
+                                                        mensagemDeErro(e, 'Não foi possível baixar o arquivo.')
+                                                    )
                                                 )
-                                            )
-                                        }
-                                        className="botao-secundario"
-                                    >
-                                        <Download className="w-4 h-4" aria-hidden="true" />
-                                        Baixar arquivo
-                                    </button>
+                                            }
+                                            className="botao-secundario"
+                                        >
+                                            <Download className="w-4 h-4" aria-hidden="true" />
+                                            Baixar arquivo
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={removendoId === anexo.id}
+                                            onClick={() => handleRemoverAnexo(anexo)}
+                                            className="botao-terciario text-recusado"
+                                        >
+                                            <Trash2 className="w-4 h-4" aria-hidden="true" />
+                                            {removendoId === anexo.id ? 'Removendo...' : 'Remover arquivo'}
+                                        </button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>

@@ -87,6 +87,10 @@ export const baixarAnexo = async (anexo) => {
     setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
+export const deleteAnexo = async (id) => {
+    await api.delete(`/anexos/${id}/arquivo`);
+};
+
 export const solicitarCorrecao = async (id, feedback) => {
     const response = await api.put(`/atividades/${id}/solicitar-correcao`, { feedback });
     return response.data;

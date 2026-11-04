@@ -147,13 +147,24 @@ namespace BancoTempo.Api.Controllers
             return StatusCode(201, Mapeamento.Anexo(anexo));
         }
 
-        // Remoção de arquivo impróprio: só a moderação.
+        // Remoção de arquivo: a moderação pode remover qualquer arquivo impróprio;
+        // quem enviou pode remover o próprio arquivo enquanto a etapa ainda aceita envios.
         [HttpDelete("{id:int}/arquivo")]
-        [Authorize(Policy = Identidade.PoliticaModeracao)]
         public async Task<IActionResult> DeleteAnexo(int id)
         {
             var anexo = await _context.AnexosAtividades.FindAsync(id);
             if (anexo == null) return this.NaoEncontrado("Não encontramos este arquivo.");
+            var atividade = await _context.Atividades.AsNoTracking().FirstAsync(a => a.Id == anexo.AtividadeId);
+
+            var eu = User.IdPessoaOuNulo();
+            var souAutorNaEtapaAberta = eu.HasValue && anexo.EnviadoPorId == eu.Value && (
+                (anexo.Finalidade == FinalidadeAnexo.Oferta && EstadosDaOferta.Contains(atividade.Status)) ||
+                (anexo.Finalidade == FinalidadeAnexo.Comprovante && EstadosDeComprovante.Contains(atividade.Status) && anexo.Rodada == atividade.RevisoesComprovantes)
+            );
+
+            if (!User.EhModeracao() && !souAutorNaEtapaAberta)
+                return await NegarAsync(atividade.Id, "Você só pode remover um arquivo que você mesmo enviou enquanto esta etapa ainda está aberta.");
+
             _context.AnexosAtividades.Remove(anexo);
             await _context.SaveChangesAsync();
             _armazenamento.Remover(anexo.CaminhoArquivo);

@@ -1,25 +1,39 @@
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
-// Diálogo acessível: fecha com Esc, guarda e devolve o foco, usa sombra elevada sem blur.
+// Diálogo acessível: fecha com Esc, guarda e devolve o foco só ao abrir ou fechar.
 const Modal = ({ isOpen, onClose, title, children }) => {
     const idTitulo = useId();
     const painelRef = useRef(null);
+    const corpoRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
 
     useEffect(() => {
         if (!isOpen) return undefined;
         const focoAnterior = document.activeElement;
         const handleEscape = (e) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') onCloseRef.current?.();
         };
 
         document.addEventListener('keydown', handleEscape);
         document.body.style.overflow = 'hidden';
 
         const timer = setTimeout(() => {
-            const focavel = painelRef.current?.querySelector(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            const campoNoCorpo = corpoRef.current?.querySelector(
+                'input:not([disabled]), textarea:not([disabled]), select:not([disabled])'
             );
+            const focavel =
+                campoNoCorpo ||
+                corpoRef.current?.querySelector(
+                    'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+                ) ||
+                painelRef.current?.querySelector(
+                    'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+                );
             (focavel || painelRef.current)?.focus();
         }, 0);
 
@@ -31,7 +45,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                 focoAnterior.focus();
             }
         };
-    }, [isOpen, onClose]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -63,7 +77,9 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         <X className="w-5 h-5" aria-hidden="true" />
                     </button>
                 </div>
-                <div className="overflow-y-auto p-5">{children}</div>
+                <div ref={corpoRef} className="overflow-y-auto p-5">
+                    {children}
+                </div>
             </div>
         </div>
     );

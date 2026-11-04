@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CircleAlert, CircleCheck, Clock, Download, Upload } from 'lucide-react';
-import { baixarAnexo, enviarComprovante, getAnexos } from '../../services/atividadeService';
+import { CircleAlert, CircleCheck, Clock, Download, Trash2, Upload } from 'lucide-react';
+import {
+    baixarAnexo,
+    deleteAnexo,
+    enviarComprovante,
+    getAnexos,
+} from '../../services/atividadeService';
 import { mensagemDeErro } from '../../services/mensagens';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 
 const TIPOS_ACEITOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+
+const formatarTamanho = (bytes) => {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const UploadComprovantes = ({
     atividadeId,
@@ -21,7 +33,10 @@ const UploadComprovantes = ({
     const fileInputRef = useRef(null);
 
     const [anexos, setAnexos] = useState([]);
+    const [arquivoPendente, setArquivoPendente] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [removendoId, setRemovendoId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [erroArquivo, setErroArquivo] = useState('');
 
@@ -40,14 +55,34 @@ const UploadComprovantes = ({
         fetchAnexos();
     }, [fetchAnexos]);
 
-    const handleFile = async (file) => {
-        if (!file) return;
+    useEffect(() => {
+        if (!arquivoPendente || !arquivoPendente.type?.startsWith('image/')) {
+            setPreviewUrl('');
+            return undefined;
+        }
+        const url = URL.createObjectURL(arquivoPendente);
+        setPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [arquivoPendente]);
+
+    const limparSelecao = () => {
+        setArquivoPendente(null);
+        setErroArquivo('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const aoEscolherArquivo = (file) => {
+        if (!file) {
+            setArquivoPendente(null);
+            return;
+        }
         setErroArquivo('');
 
         if (!TIPOS_ACEITOS.includes(file.type)) {
             const msg = 'Envie um arquivo em PDF, PNG ou JPG.';
             setErroArquivo(msg);
             toast.error(msg);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
@@ -55,13 +90,21 @@ const UploadComprovantes = ({
             const msg = 'O arquivo passa de 10 MB. Escolha um menor.';
             setErroArquivo(msg);
             toast.error(msg);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
+        setArquivoPendente(file);
+    };
+
+    const confirmarEnvio = async () => {
+        if (!arquivoPendente) return;
+        setErroArquivo('');
         setUploading(true);
         try {
-            await enviarComprovante(atividadeId, file);
+            await enviarComprovante(atividadeId, arquivoPendente);
             toast.success('Comprovante enviado.');
+            limparSelecao();
             await fetchAnexos();
             if (onUploadSuccess) onUploadSuccess();
         } catch (error) {
@@ -70,7 +113,20 @@ const UploadComprovantes = ({
             toast.error(msg);
         } finally {
             setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleRemoverAnexo = async (anexo) => {
+        setRemovendoId(anexo.id);
+        try {
+            await deleteAnexo(anexo.id);
+            toast.success('Arquivo removido. Você pode enviar outro comprovante.');
+            await fetchAnexos();
+            if (onUploadSuccess) onUploadSuccess();
+        } catch (error) {
+            toast.error(mensagemDeErro(error, 'Não foi possível remover o arquivo.'));
+        } finally {
+            setRemovendoId(null);
         }
     };
 
@@ -144,12 +200,12 @@ const UploadComprovantes = ({
             )}
 
             {canUpload ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                     <label htmlFor="comprovante-arquivo" className="rotulo">
                         Enviar comprovante (PDF, PNG ou JPG até 10 MB)
                     </label>
                     <span id="comprovante-ajuda" className="ajuda">
-                        Foto do encontro, captura da chamada ou arquivo produzido na ajuda.
+                        Foto do encontro, captura da chamada ou arquivo produzido na ajuda. Escolha o arquivo e confirme antes de enviar.
                     </span>
                     <input
                         id="comprovante-arquivo"
@@ -158,15 +214,47 @@ const UploadComprovantes = ({
                         accept=".pdf,application/pdf,image/jpeg,image/png,image/jpg"
                         aria-describedby="comprovante-ajuda"
                         disabled={uploading}
-                        onChange={(e) => handleFile(e.target.files?.[0])}
+                        onChange={(e) => aoEscolherArquivo(e.target.files?.[0])}
                         className="campo py-2"
                     />
-                    {uploading && (
-                        <p role="status" className="inline-flex items-center gap-2 text-sm text-texto-suave">
-                            <Upload className="w-4 h-4" aria-hidden="true" />
-                            Enviando comprovante...
-                        </p>
+
+                    {arquivoPendente && (
+                        <div className="space-y-3 rounded-campo border border-borda bg-fundo-apoio p-3.5 text-sm">
+                            <div>
+                                <p className="font-bold text-texto">Confira o arquivo antes de enviar:</p>
+                                <p className="mt-0.5 break-all text-texto-suave">
+                                    {arquivoPendente.name} ({formatarTamanho(arquivoPendente.size)})
+                                </p>
+                            </div>
+                            {previewUrl && (
+                                <img
+                                    src={previewUrl}
+                                    alt={`Prévia de ${arquivoPendente.name}`}
+                                    className="max-h-40 rounded-campo border border-borda bg-superficie object-contain"
+                                />
+                            )}
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={confirmarEnvio}
+                                    disabled={uploading}
+                                    className="botao-primario"
+                                >
+                                    <Upload className="w-4 h-4" aria-hidden="true" />
+                                    {uploading ? 'Enviando...' : 'Confirmar e enviar comprovante'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={limparSelecao}
+                                    disabled={uploading}
+                                    className="botao-secundario"
+                                >
+                                    Trocar ou cancelar
+                                </button>
+                            </div>
+                        </div>
                     )}
+
                     {erroArquivo && (
                         <p role="alert" className="erro-campo">
                             <CircleAlert className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
@@ -190,45 +278,69 @@ const UploadComprovantes = ({
                 <div className="space-y-2 pt-2 border-t border-borda">
                     <h3 className="text-base font-semibold">Arquivos enviados</h3>
                     <ul className="divide-y divide-borda rounded-campo border border-borda">
-                        {anexos.map((anexo) => (
-                            <li
-                                key={anexo.id}
-                                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
-                            >
-                                <div className="min-w-0">
-                                    <p className="font-semibold break-all">{anexo.nomeArquivo}</p>
-                                    <p className="text-sm text-texto-suave">
-                                        {anexo.finalidade === 1
-                                            ? 'Anexo da oferta'
-                                            : `${
-                                                  anexo.enviadoPorId === user?.id
-                                                      ? 'Você enviou'
-                                                      : 'A outra pessoa enviou'
-                                              }${
-                                                  rodadaAtual > 0
-                                                      ? anexo.rodada === rodadaAtual
-                                                          ? ' (envio novo)'
-                                                          : ' (antes do ajuste)'
-                                                      : ''
-                                              }`}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        baixarAnexo(anexo).catch((e) =>
-                                            toast.error(
-                                                mensagemDeErro(e, 'Não foi possível baixar o arquivo.')
-                                            )
-                                        )
-                                    }
-                                    className="botao-terciario"
+                        {anexos.map((anexo) => {
+                            const podeRemoverProprio =
+                                canUpload &&
+                                anexo.enviadoPorId === user?.id &&
+                                anexo.finalidade === 2 &&
+                                anexo.rodada === rodadaAtual;
+
+                            return (
+                                <li
+                                    key={anexo.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
                                 >
-                                    <Download className="w-4 h-4" aria-hidden="true" />
-                                    Baixar
-                                </button>
-                            </li>
-                        ))}
+                                    <div className="min-w-0">
+                                        <p className="font-semibold break-all">{anexo.nomeArquivo}</p>
+                                        <p className="text-sm text-texto-suave">
+                                            {anexo.finalidade === 1
+                                                ? 'Anexo da oferta'
+                                                : `${
+                                                      anexo.enviadoPorId === user?.id
+                                                          ? 'Você enviou'
+                                                          : 'A outra pessoa enviou'
+                                                  }${
+                                                      rodadaAtual > 0
+                                                          ? anexo.rodada === rodadaAtual
+                                                              ? ' (envio novo)'
+                                                              : ' (antes do ajuste)'
+                                                          : ''
+                                                  }`}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                baixarAnexo(anexo).catch((e) =>
+                                                    toast.error(
+                                                        mensagemDeErro(
+                                                            e,
+                                                            'Não foi possível baixar o arquivo.'
+                                                        )
+                                                    )
+                                                )
+                                            }
+                                            className="botao-terciario"
+                                        >
+                                            <Download className="w-4 h-4" aria-hidden="true" />
+                                            Baixar
+                                        </button>
+                                        {podeRemoverProprio && (
+                                            <button
+                                                type="button"
+                                                disabled={removendoId === anexo.id}
+                                                onClick={() => handleRemoverAnexo(anexo)}
+                                                className="botao-terciario text-recusado"
+                                            >
+                                                <Trash2 className="w-4 h-4" aria-hidden="true" />
+                                                {removendoId === anexo.id ? 'Removendo...' : 'Remover'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
             )}
