@@ -77,7 +77,7 @@ public sealed class ConferenciaTests
         Assert.Equal(9, await _cenario.StatusNoBancoAsync(troca.AtividadeId));
         Assert.Equal(new Horas(3, 0, 1, 0), await Cenario.HorasAsync(troca.Oferece));
         Assert.Equal(new Horas(1, 0, 0, 1), await Cenario.HorasAsync(troca.Pede));
-        Assert.Single((await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId)).Where(e => e.StatusNovo == 9));
+        Assert.Single(await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId), e => e.StatusNovo == 9);
     }
 
     [Fact]

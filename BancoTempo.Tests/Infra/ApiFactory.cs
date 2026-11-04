@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +36,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
         {
-            app.Use((contexto, proximo) =>
+            app.Use((HttpContext contexto, RequestDelegate proximo) =>
             {
                 contexto.Connection.RemoteIpAddress ??= IPAddress.Loopback;
                 return proximo(contexto);

@@ -216,7 +216,8 @@ public sealed class Cenario
         await resposta.DeveResponder(HttpStatusCode.OK);
         var lista = await resposta.LerJsonAsync();
         return lista.EnumerateArray().Select(e => new Evento(
-            e.TryGetProperty("ocorridoEm", out var o) && o.TryGetDateTimeOffset(out var quando) ? quando : null,
+            e.TryGetProperty("ocorridoEm", out var o) && o.ValueKind == JsonValueKind.String
+                && o.TryGetDateTimeOffset(out var quando) ? quando : null,
             e.TryGetProperty("tipo", out var t) && t.ValueKind == JsonValueKind.String ? t.GetString() : null,
             e.TryGetProperty("statusAnterior", out var anterior) ? Respostas.LerStatus(anterior) : null,
             e.TryGetProperty("statusNovo", out var novo) ? Respostas.LerStatus(novo) : null)).ToList();

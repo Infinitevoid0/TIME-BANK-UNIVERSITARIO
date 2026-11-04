@@ -13,9 +13,7 @@ public sealed class ApiFixture : IAsyncLifetime
 {
     public const int LimiteAlto = 100000;
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .Build();
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
     private readonly string _chaveJwt = GerarChave(48);
     private readonly string _senhaEquipe = GerarChave(20);

@@ -60,7 +60,6 @@ public sealed class TransicoesTests
 
         await segundoCancelamento.DeveResponder(HttpStatusCode.Conflict);
         Assert.Equal(new Horas(2, 0, 0, 0), await Cenario.HorasAsync(troca.Pede));
-        Assert.Single((await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId))
-            .Where(e => e.StatusNovo == 10));
+        Assert.Single(await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId), e => e.StatusNovo == 10);
     }
 }
