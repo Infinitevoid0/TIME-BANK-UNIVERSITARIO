@@ -86,7 +86,7 @@ const ChatPage = () => {
     const statusObj = getStatusMessage(atividade.status);
 
     return (
-        <div className="max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+        <div className="max-w-6xl mx-auto flex flex-col lg:h-[calc(100vh-8rem)]">
             <div className="mb-4">
                 <button onClick={() => navigate('/minhas-atividades')} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
                     <ArrowLeft className="w-4 h-4 mr-1" />
@@ -94,9 +94,9 @@ const ChatPage = () => {
                 </button>
             </div>
 
-            <div className="flex flex-1 gap-6 min-h-0">
+            <div className="flex flex-col lg:flex-row flex-1 gap-6 min-h-0">
                 {/* Coluna Principal: Chat */}
-                <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 h-[70vh] lg:h-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     {/* Header do Chat */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
                         <div>
@@ -158,7 +158,7 @@ const ChatPage = () => {
                 </div>
 
                 {/* Coluna Lateral: Comprovantes */}
-                <div className="w-80 flex flex-col gap-4">
+                <div className="w-full lg:w-80 flex flex-col gap-4">
                     <UploadComprovantes 
                         atividadeId={atividade.id} 
                         statusAtual={atividade.status} 
