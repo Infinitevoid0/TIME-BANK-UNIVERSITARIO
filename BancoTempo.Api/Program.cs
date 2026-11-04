@@ -115,3 +115,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Permite que BancoTempo.Tests suba a API com WebApplicationFactory.
+public partial class Program { }
