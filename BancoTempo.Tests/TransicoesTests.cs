@@ -61,6 +61,7 @@ public sealed class TransicoesTests
         Assert.All(historico.Where(e => e.StatusNovo == 10).GroupBy(e => e.Tipo), grupo => Assert.Single(grupo));
     }
 
+    // Cada transição aceita grava um único evento com o tipo específico; o cancelamento devolve horas.
     private static bool EhCancelamentoAplicado(Evento evento) =>
-        evento.Tipo == "transicao_aplicada" && evento.StatusAnterior == 6 && evento.StatusNovo == 10;
+        evento.Tipo == "horas_devolvidas" && evento.StatusAnterior == 6 && evento.StatusNovo == 10;
 }
