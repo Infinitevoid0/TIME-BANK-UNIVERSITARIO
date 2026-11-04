@@ -4,6 +4,7 @@ import LoginPage from './components/auth/LoginPage';
 import CadastroPage from './components/auth/CadastroPage';
 import AtividadesPage from './components/atividades/AtividadesPage';
 import AtividadeDetalhesPage from './components/atividades/AtividadeDetalhesPage';
+import ExplorarPage from './pages/ExplorarPage';
 import MinhasAtividadesPage from './components/minhas-atividades/MinhasAtividadesPage';
 import ModeracaoPage from './components/moderacao/ModeracaoPage';
 import ModeracaoDetalhesPage from './components/moderacao/ModeracaoDetalhesPage';
@@ -50,7 +51,7 @@ function App() {
       <Route path="/" element={<Navigate to="/explorar" replace />} />
 
       <Route element={<Layout />}>
-        <Route path="/explorar" element={protegida(<AtividadesPage key="explorar" />)} />
+        <Route path="/explorar" element={protegida(<ExplorarPage />)} />
         <Route path="/oferecer" element={protegida(<AtividadesPage key="oferecer" abrirOferta />)} />
         <Route path="/pedir-ajuda" element={protegida(<AtividadesPage key="pedir" />)} />
         <Route path="/minhas-horas" element={protegida(<MinhasAtividadesPage />)} />
