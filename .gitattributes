@@ -1,0 +1,2 @@
+# Scripts de shell sempre com LF, para rodar no Git Bash e no Linux.
+*.sh text eol=lf
