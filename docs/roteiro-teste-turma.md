@@ -30,7 +30,7 @@ Para o Theo, no notebook da equipe. Comandos no Git Bash, na raiz do repositóri
 - **Moderação inicial**: em **Moderação**, aprove, peça correção ou reprove as ofertas novas.
 - **Conferência final**: na mesma página, a seção "Conferência final das trocas" lista as trocas em andamento. As que estão em "Comprovantes enviados: conferir" pedem validar, invalidar ou pedir ajuste (uma vez só).
 - **Troca parada**: abra a troca e use "Cancelar troca e devolver horas". As horas voltam para quem pediu.
-- **Arquivo impróprio**: só pela API (`DELETE /api/anexos/{id}/arquivo`, com o token da moderação).
+- **Arquivo impróprio**: na tela da troca na moderação, use o botão "Remover arquivo" ao lado do comprovante (ou pela API em `DELETE /api/anexos/{id}/arquivo`).
 - Você **não** consegue moderar uma oferta ou troca da qual participa. Peça para outra pessoa da equipe.
 - Se algo travar, veja os logs: `docker compose -f docker-compose.teste.yml --env-file .env.teste logs --tail 100 backend`.
 - Erros 500 aparecem como evento `erro_servidor` com o id de rastreio, que também está no log.
@@ -54,7 +54,7 @@ Para o Theo, no notebook da equipe. Comandos no Git Bash, na raiz do repositóri
 ## 4. No fim da aula
 
 1. Exporte os eventos, ainda com o sistema no ar:
-   - pela página **Usuários**, logado com a conta de administração, botão "Exportar eventos (CSV)" (não existe na tag `aula-pronta`; nela, use o comando abaixo);
+   - pela página **Administração** (no menu da conta), logado com a conta de administração, botão "Exportar eventos (CSV)";
    - ou direto do banco: `docker compose -f docker-compose.teste.yml --env-file .env.teste exec postgres psql -U bancotempo -d timebank -c "\copy (select * from \"EventosSistema\" order by \"Id\") to stdout with csv header" > eventos-bruto.csv`.
    - O CSV da rota usa pseudônimos (U01, U02...). O bruto tem o id interno: guarde-o só com a equipe.
 2. Rode as consultas de `docs/consultas-analise.sql`. A de conservação de horas tem que dar diferença zero.
