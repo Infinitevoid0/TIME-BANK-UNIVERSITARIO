@@ -7,7 +7,7 @@ import { mensagemDeErro } from '../services/mensagens';
 import { useToast } from '../hooks/useToast';
 import { AuthContext } from './authContexto';
 
-const DESTINO_DEPOIS_DO_LOGIN = '/atividades';
+const DESTINO_DEPOIS_DO_LOGIN = '/explorar';
 
 // O usuário (papel e horas incluídos) sempre vem de GET /usuarios/me, nunca de um objeto antigo salvo no navegador.
 export const AuthProvider = ({ children }) => {

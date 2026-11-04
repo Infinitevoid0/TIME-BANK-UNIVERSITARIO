@@ -262,3 +262,14 @@
 .descricao-rica ol > li[data-list="bullet"] { list-style-type: disc; }
 .descricao-rica a { color: var(--destaque); text-decoration: underline; overflow-wrap: anywhere; }
 .descricao-rica { overflow-wrap: anywhere; }
+
+/* Movimento só em resposta a ações: aviso entrando e menu abrindo. */
+@keyframes surgir-de-cima {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.toast-entrada,
+.menu-entrada {
+  animation: surgir-de-cima var(--duracao) var(--curva);
+}

@@ -33,12 +33,12 @@ const getStatusBadge = (status) => {
     }
 };
 
-const AtividadesPage = () => {
+const AtividadesPage = ({ abrirOferta = false }) => {
     const [atividades, setAtividades] = useState([]);
     const [disciplinas, setDisciplinas] = useState([]);
     const [cursos, setCursos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [modalOpen, setModalOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(abrirOferta);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState('');
