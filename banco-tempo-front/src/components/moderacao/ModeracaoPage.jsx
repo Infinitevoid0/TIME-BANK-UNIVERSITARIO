@@ -1,202 +1,183 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getAtividadesPendentes, getConferencia, reprovarAtividade } from '../../services/atividadeService';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { getAtividadesPendentes, getConferencia } from '../../services/atividadeService';
+import { formatarData } from '../../services/formatos';
 import { mensagemDeErro } from '../../services/mensagens';
-import ModeracaoPreviewModal from './ModeracaoPreviewModal';
-import { useToast } from '../../hooks/useToast';
-import { ShieldAlert, CheckCircle, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
+import ChipHoras from '../ui/ChipHoras';
+import ChipStatus from '../ui/ChipStatus';
+import { Carregando, ErroCarregar, Vazio } from '../ui/Estados';
+
+const ROTULO_TROCA = {
+    6: 'Troca combinada, aguardando os dois comprovantes.',
+    7: 'Os dois comprovantes foram enviados e aguardam conferência.',
+    8: 'Aguardando reenvio dos comprovantes após pedido de ajuste.',
+};
 
 const ModeracaoPage = () => {
-    const [atividades, setAtividades] = useState([]);
-    const [trocas, setTrocas] = useState([]);
-    const [erroCarregar, setErroCarregar] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [selectedAtividade, setSelectedAtividade] = useState(null);
-    const [mostrarApenasCorrigidas, setMostrarApenasCorrigidas] = useState(false);
-    const toast = useToast();
-    const navigate = useNavigate();
+    const [estado, setEstado] = useState({
+        carregando: true,
+        erro: '',
+        ofertas: [],
+        trocas: [],
+    });
+    const [apenasAjustadas, setApenasAjustadas] = useState(false);
+    const [tentativa, setTentativa] = useState(0);
 
-    useEffect(() => {
-        carregarDados();
+    const recarregar = useCallback(() => {
+        setEstado((atual) => ({ ...atual, carregando: true, erro: '' }));
+        setTentativa((n) => n + 1);
     }, []);
 
-    const carregarDados = async () => {
-        setErroCarregar(null);
-        try {
-            const [data, emAndamento] = await Promise.all([getAtividadesPendentes(), getConferencia()]);
-            setAtividades(data);
-            setTrocas(emAndamento);
-        } catch (error) {
-            setErroCarregar(mensagemDeErro(error, 'Não foi possível carregar a fila de moderação.'));
-        } finally {
-            setLoading(false);
-        }
-    };
+    useEffect(() => {
+        let ativo = true;
+        Promise.all([
+            getAtividadesPendentes(),
+            getConferencia(),
+        ])
+            .then(([ofertas, trocas]) => {
+                if (!ativo) return;
+                setEstado({
+                    carregando: false,
+                    erro: '',
+                    ofertas: ofertas || [],
+                    trocas: trocas || [],
+                });
+            })
+            .catch((error) => {
+                if (!ativo) return;
+                setEstado({
+                    carregando: false,
+                    erro: mensagemDeErro(error, 'Não foi possível carregar a fila de moderação.'),
+                    ofertas: [],
+                    trocas: [],
+                });
+            });
+        return () => {
+            ativo = false;
+        };
+    }, [tentativa]);
 
-    const pendentes = atividades.filter(a => {
-        if (mostrarApenasCorrigidas) {
-            return a.status === 5;
-        }
-        return a.status === 1 || a.status === 5;
-    });
+    if (estado.carregando) {
+        return <Carregando texto="Carregando fila de moderação" linhas={4} />;
+    }
 
-    const handleRemoveLocal = (idAtividade) => {
-        setAtividades(prev => prev.filter(a => a.id !== idAtividade));
-        setModalOpen(false);
-    };
+    if (estado.erro) {
+        return <ErroCarregar mensagem={estado.erro} aoTentar={recarregar} />;
+    }
 
-    const handleReprovar = async (idAtividade) => {
-        try {
-            await reprovarAtividade(idAtividade);
-            handleRemoveLocal(idAtividade);
-            toast.success("Atividade reprovada.");
-        } catch (error) {
-            toast.error(mensagemDeErro(error, 'Não foi possível reprovar agora.'));
-        }
-    };
-
-    const handleVerDetalhes = (idAtividade) => {
-        setModalOpen(false);
-        navigate(`/moderacao/${idAtividade}`);
-    };
-
-    const handleOpenModal = (atividade) => {
-        setSelectedAtividade(atividade);
-        setModalOpen(true);
-    };
-
-    if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
-
-    if (erroCarregar) return (
-        <div className="mt-12 text-center" role="alert">
-            <p className="text-gray-800">{erroCarregar}</p>
-            <button type="button" onClick={() => { setLoading(true); carregarDados(); }} className="mt-4 px-4 py-2 min-h-11 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50">Tentar de novo</button>
-        </div>
+    const pendentes = estado.ofertas.filter((a) =>
+        apenasAjustadas ? a.status === 5 : a.status === 1 || a.status === 5
+    );
+    const trocasOrdenadas = [...estado.trocas].sort(
+        (a, b) => (a.status === 7 ? -1 : 0) - (b.status === 7 ? -1 : 0)
     );
 
-    const rotuloTroca = { 6: 'Em andamento, esperando comprovantes', 7: 'Comprovantes enviados: conferir', 8: 'Esperando ajuste nos comprovantes' };
-    const trocasOrdenadas = [...trocas].sort((a, b) => (a.status === 7 ? -1 : 0) - (b.status === 7 ? -1 : 0));
-
     return (
-        <div className="space-y-6">
-            <section aria-labelledby="titulo-conferencia" className="bg-white rounded-xl border border-gray-200 p-4">
-                <h2 id="titulo-conferencia" className="text-lg font-semibold text-gray-900">Conferência final das trocas</h2>
-                <p className="text-sm text-gray-600 mt-1">Trocas com status 7 precisam de conferência. Trocas paradas em 6 ou 8 podem ser canceladas no detalhe.</p>
+        <div className="space-y-8">
+            <div>
+                <h1>Moderação</h1>
+                <p className="mt-2 max-w-[70ch] text-texto-suave">
+                    Confira as ofertas novas antes de irem ao ar e valide os comprovantes das trocas em andamento.
+                </p>
+            </div>
+
+            <section aria-labelledby="titulo-conferencia" className="space-y-3">
+                <div>
+                    <h2 id="titulo-conferencia">Conferência final das trocas</h2>
+                    <p className="mt-1 text-texto-suave">
+                        Trocas com os dois comprovantes enviados aparecem primeiro. Trocas paradas podem ser canceladas no detalhe.
+                    </p>
+                </div>
+
                 {trocasOrdenadas.length === 0 ? (
-                    <p className="mt-3 text-sm text-gray-600">Nenhuma troca em andamento agora.</p>
+                    <Vazio titulo="Nenhuma troca em andamento agora.">
+                        Quando estudantes combinarem uma ajuda, ela aparece aqui para conferência.
+                    </Vazio>
                 ) : (
-                    <ul className="mt-3 divide-y divide-gray-200">
-                        {trocasOrdenadas.map(t => (
-                            <li key={t.id} className="py-3 flex flex-wrap items-center justify-between gap-2">
+                    <ul className="painel divide-y divide-borda overflow-hidden">
+                        {trocasOrdenadas.map((t) => (
+                            <li
+                                key={t.id}
+                                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5"
+                            >
                                 <div className="min-w-0">
-                                    <p className="font-medium text-gray-900 truncate">{t.titulo}</p>
-                                    <p className="text-sm text-gray-600">{t.ofertante?.nome} ajuda {t.comprador?.nome}, {t.custoHoras} h. {rotuloTroca[t.status]}</p>
+                                    <h3 className="break-words">{t.titulo}</h3>
+                                    <p className="mt-1 text-texto-suave">
+                                        <strong>{t.ofertante?.nome || 'Colega'}</strong> ajuda{' '}
+                                        <strong>{t.comprador?.nome || 'Colega'}</strong>. {ROTULO_TROCA[t.status] || ''}
+                                    </p>
                                 </div>
-                                <button type="button" onClick={() => navigate(`/moderacao/${t.id}`)} className="px-4 py-2 min-h-11 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50">
-                                    {t.status === 7 ? 'Conferir comprovantes' : 'Ver troca'}
-                                </button>
+                                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                    <ChipHoras horas={t.custoHoras} />
+                                    <ChipStatus status={t.status} />
+                                    <Link to={`/moderacao/${t.id}`} className="botao-secundario">
+                                        {t.status === 7 ? 'Conferir comprovantes' : 'Ver troca'}
+                                    </Link>
+                                </div>
                             </li>
                         ))}
                     </ul>
                 )}
             </section>
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                        <ShieldAlert className="w-6 h-6 mr-2 text-yellow-600" />
-                        Fila de Moderação
-                    </h1>
-                    <p className="mt-1 text-sm text-gray-500">Revise e aprove ou reprove atividades extra-curriculares.</p>
-                </div>
-                <div className="flex items-center">
-                    <button
-                        type="button"
-                        onClick={() => setMostrarApenasCorrigidas(!mostrarApenasCorrigidas)}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                            mostrarApenasCorrigidas
-                                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
-                    >
-                        {mostrarApenasCorrigidas
-                            ? <ToggleRight className="w-5 h-5 text-indigo-600" />
-                            : <ToggleLeft className="w-5 h-5 text-gray-400" />
-                        }
-                        Somente atividades corrigidas
-                    </button>
-                </div>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atividade</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ofertante</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Custo</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                            <th scope="col" className="relative px-6 py-3"><span className="sr-only">Ações</span></th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {pendentes.map((atividade) => (
-                            <tr key={atividade.id} className="hover:bg-yellow-50/30 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                                        {atividade.titulo}
-                                        {atividade.status === 5 && (
-                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                                Corrigida
-                                            </span>
+            <section aria-labelledby="titulo-fila-ofertas" className="space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 id="titulo-fila-ofertas">Ofertas aguardando conferência</h2>
+                        <p className="mt-1 text-texto-suave">
+                            Aprove, peça um ajuste ou recuse ofertas enviadas por colegas.
+                        </p>
+                    </div>
+                    <label htmlFor="moderacao-ajustadas" className="flex min-h-11 items-center gap-3 font-bold">
+                        <input
+                            id="moderacao-ajustadas"
+                            type="checkbox"
+                            checked={apenasAjustadas}
+                            onChange={(e) => setApenasAjustadas(e.target.checked)}
+                            className="h-5 w-5 shrink-0 accent-[var(--destaque)]"
+                        />
+                        Mostrar só ofertas ajustadas
+                    </label>
+                </div>
+
+                {pendentes.length === 0 ? (
+                    <Vazio titulo="Nenhuma oferta aguardando conferência.">
+                        {apenasAjustadas
+                            ? 'Desmarque o filtro acima para ver todas as ofertas pendentes.'
+                            : 'Quando alguém publicar uma oferta nova, ela aparece aqui.'}
+                    </Vazio>
+                ) : (
+                    <ul className="painel divide-y divide-borda overflow-hidden">
+                        {pendentes.map((a) => (
+                            <li
+                                key={a.id}
+                                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5"
+                            >
+                                <div className="min-w-0">
+                                    <h3 className="break-words">{a.titulo}</h3>
+                                    <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-texto-suave">
+                                        <span>
+                                            Quem oferece: <strong className="text-texto">{a.ofertante?.nome || 'Colega'}</strong>
+                                        </span>
+                                        {a.disciplina && <span>Disciplina: {a.disciplina.nome}</span>}
+                                        {a.dataCriacao && <span>Enviada em {formatarData(a.dataCriacao)}</span>}
+                                        {a.status === 5 && (
+                                            <span className="font-bold text-texto">Reenviada após ajuste</span>
                                         )}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {atividade.ofertante?.nome || 'N/A'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center text-sm text-gray-900">
-                                        <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                                        {atividade.custoHoras}h
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(atividade.dataCriacao).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button 
-                                        onClick={() => handleOpenModal(atividade)}
-                                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-                                    >
-                                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                                        Revisar
-                                    </button>
-                                </td>
-                            </tr>
+                                    </p>
+                                </div>
+                                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                    <ChipHoras horas={a.custoHoras} />
+                                    <ChipStatus status={a.status} />
+                                    <Link to={`/moderacao/${a.id}`} className="botao-secundario">
+                                        Conferir oferta
+                                    </Link>
+                                </div>
+                            </li>
                         ))}
-                        {pendentes.length === 0 && (
-                            <tr>
-                                <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                                    <ShieldAlert className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-                                    <p className="text-lg font-medium text-gray-900">Tudo limpo!</p>
-                                    <p className="mt-1">Não há atividades pendentes para moderação no momento.</p>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table></div>
-            </div>
-
-            {selectedAtividade && (
-                <ModeracaoPreviewModal
-                    isOpen={modalOpen}
-                    onClose={() => setModalOpen(false)}
-                    atividade={selectedAtividade}
-                    onReprovar={handleReprovar}
-                    onVerDetalhes={handleVerDetalhes}
-                />
-            )}
+                    </ul>
+                )}
+            </section>
         </div>
     );
 };

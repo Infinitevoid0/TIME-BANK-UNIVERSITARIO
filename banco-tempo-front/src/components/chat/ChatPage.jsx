@@ -1,65 +1,61 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getChat, enviarMensagem } from '../../services/chatService';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, MessageSquare, Send } from 'lucide-react';
+import { enviarMensagem, getChat } from '../../services/chatService';
 import { getAtividade } from '../../services/atividadeService';
+import { formatarHora } from '../../services/formatos';
+import { mensagemDeErro } from '../../services/mensagens';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { ArrowLeft, Send, MessageSquare } from 'lucide-react';
+import ChipHoras from '../ui/ChipHoras';
+import ChipStatus from '../ui/ChipStatus';
+import { Carregando, ErroCarregar } from '../ui/Estados';
 import UploadComprovantes from './UploadComprovantes';
-import { mensagemDeErro } from '../../services/mensagens';
-
-const getStatusMessage = (status) => {
-    switch (status) {
-        case 6: return { text: "Em Execução", bg: "bg-blue-100", textColor: "text-blue-800" };
-        case 7: return { text: "Aguardando Validação Final", bg: "bg-indigo-100", textColor: "text-indigo-800" };
-        case 8: return { text: "Necessita Revisão de Comprovantes", bg: "bg-orange-100", textColor: "text-orange-800" };
-        case 9: return { text: "Transação Validada", bg: "bg-emerald-100", textColor: "text-emerald-800" };
-        case 10: return { text: "Transação Inválida/Cancelada", bg: "bg-red-100", textColor: "text-red-800" };
-        default: return { text: "Status Desconhecido", bg: "bg-gray-100", textColor: "text-gray-800" };
-    }
-};
 
 const ChatPage = () => {
     const { atividadeId } = useParams();
-    const navigate = useNavigate();
     const { user } = useAuth();
     const toast = useToast();
-    const messagesEndRef = useRef(null);
+    const fimMensagensRef = useRef(null);
 
     const [chat, setChat] = useState(null);
     const [atividade, setAtividade] = useState(null);
     const [novoConteudo, setNovoConteudo] = useState('');
     const [loading, setLoading] = useState(true);
+    const [erro, setErro] = useState('');
     const [enviando, setEnviando] = useState(false);
 
-    const fetchData = async () => {
+    const carregar = useCallback(async () => {
+        setErro('');
         try {
             const [chatData, atividadeData] = await Promise.all([
                 getChat(atividadeId),
-                getAtividade(atividadeId)
+                getAtividade(atividadeId),
             ]);
             setChat(chatData);
             setAtividade(atividadeData);
         } catch (error) {
-            toast.error(mensagemDeErro(error, 'Não foi possível abrir este chat agora.'));
-            navigate('/minhas-atividades');
+            const msg = mensagemDeErro(error, 'Não foi possível abrir esta conversa agora.');
+            setErro(msg);
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
-    };
+    }, [atividadeId, toast]);
 
     useEffect(() => {
-        fetchData();
-        // Polling para novas mensagens (a cada 5 segundos)
+        carregar();
         const interval = setInterval(() => {
-            getChat(atividadeId).then(data => setChat(data)).catch(() => {});
+            getChat(atividadeId)
+                .then((data) => setChat(data))
+                .catch(() => {});
         }, 5000);
         return () => clearInterval(interval);
-    }, [atividadeId]);
+    }, [atividadeId, carregar]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chat?.mensagens]);
+        fimMensagensRef.current?.scrollIntoView({ behavior: 'auto' });
+    }, [chat?.mensagens?.length]);
 
     const handleEnviarMensagem = async (e) => {
         e.preventDefault();
@@ -67,10 +63,10 @@ const ChatPage = () => {
 
         setEnviando(true);
         try {
-            const novaMensagem = await enviarMensagem(atividadeId, novoConteudo);
-            setChat(prev => ({
+            const novaMensagem = await enviarMensagem(atividadeId, novoConteudo.trim());
+            setChat((prev) => ({
                 ...prev,
-                mensagens: [...(prev.mensagens || []), novaMensagem]
+                mensagens: [...(prev?.mensagens || []), novaMensagem],
             }));
             setNovoConteudo('');
         } catch (error) {
@@ -80,93 +76,152 @@ const ChatPage = () => {
         }
     };
 
-    if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
-    if (!atividade || !chat) return null;
+    if (loading) {
+        return <Carregando texto="Carregando conversa e comprovantes" linhas={3} />;
+    }
 
-    const statusObj = getStatusMessage(atividade.status);
+    if (erro || !atividade || !chat) {
+        return (
+            <div className="max-w-[42.5rem] space-y-4">
+                <Link to="/minhas-horas" className="botao-terciario">
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar para Minhas horas
+                </Link>
+                <ErroCarregar
+                    mensagem={erro || 'Não encontramos esta conversa.'}
+                    aoTentar={() => {
+                        setLoading(true);
+                        carregar();
+                    }}
+                />
+            </div>
+        );
+    }
+
+    const souParticipante =
+        user?.id === atividade.ofertanteId || user?.id === atividade.compradorId;
 
     return (
-        <div className="max-w-6xl mx-auto flex flex-col lg:h-[calc(100vh-8rem)]">
-            <div className="mb-4">
-                <button onClick={() => navigate('/minhas-atividades')} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
-                    <ArrowLeft className="w-4 h-4 mr-1" />
-                    Voltar para Minhas Atividades
-                </button>
+        <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <Link to={`/trocas/${atividade.id}`} className="botao-terciario">
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar ao detalhe da troca
+                </Link>
+                <Link to="/minhas-horas" className="botao-terciario">
+                    Ir para Minhas horas
+                </Link>
             </div>
 
-            <div className="flex flex-col lg:flex-row flex-1 gap-6 min-h-0">
-                {/* Coluna Principal: Chat */}
-                <div className="flex-1 flex flex-col min-w-0 h-[70vh] lg:h-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    {/* Header do Chat */}
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">{atividade.titulo}</h2>
-                            <p className="text-sm text-gray-500 mt-1 flex items-center">
-                                Chat da troca. Tempo: {atividade.custoHoras} h
-                            </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusObj.bg} ${statusObj.textColor}`}>
-                            {statusObj.text}
-                        </span>
+            <div className="painel p-5 sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h1>{atividade.titulo}</h1>
+                        <p className="mt-1 text-texto-suave">
+                            Conversa entre <strong>{atividade.ofertante?.nome || 'Quem oferece'}</strong> e{' '}
+                            <strong>{atividade.comprador?.nome || 'Quem pediu'}</strong>
+                        </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <ChipHoras horas={atividade.custoHoras} />
+                        <ChipStatus status={atividade.status} />
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-12 items-start">
+                <section
+                    aria-labelledby="titulo-mensagens"
+                    className="painel flex flex-col overflow-hidden lg:col-span-7"
+                >
+                    <div className="border-b border-borda px-5 py-3.5">
+                        <h2 id="titulo-mensagens" className="text-xl">
+                            Mensagens
+                        </h2>
+                        <p className="text-sm text-texto-suave">
+                            Combinem horário, local ou link da chamada sem informar dados pessoais sensíveis.
+                        </p>
                     </div>
 
-                    {/* Área de Mensagens */}
-                    <div className="flex-1 p-6 overflow-y-auto bg-white flex flex-col gap-4">
-                        {(!chat.mensagens || chat.mensagens.length === 0) ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                                <MessageSquare className="w-12 h-12 mb-2 opacity-50" />
-                                <p>Nenhuma mensagem ainda.</p>
-                                <p className="text-sm">Envie uma mensagem para combinar os detalhes.</p>
+                    <div className="flex max-h-[26rem] min-h-[16rem] flex-col gap-3 overflow-y-auto p-5">
+                        {!chat.mensagens || chat.mensagens.length === 0 ? (
+                            <div className="my-auto py-8 text-center text-texto-suave">
+                                <MessageSquare className="mx-auto mb-2 h-8 w-8" aria-hidden="true" />
+                                <p className="font-bold text-texto">Nenhuma mensagem ainda.</p>
+                                <p className="mt-1 text-sm">
+                                    Escreva abaixo para combinar os detalhes da ajuda.
+                                </p>
                             </div>
                         ) : (
                             chat.mensagens.map((msg) => {
-                                const isMe = msg.remetenteId === user.id;
+                                const ehMinha = msg.remetenteId === user?.id;
                                 return (
-                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-900 rounded-tl-none'}`}>
-                                            <p className="text-sm">{msg.conteudo}</p>
-                                            <div className={`text-[10px] mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500'}`}>
-                                                {new Date(msg.dataEnvio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
+                                    <div
+                                        key={msg.id}
+                                        className={`flex flex-col ${ehMinha ? 'items-end' : 'items-start'}`}
+                                    >
+                                        <div
+                                            className={`max-w-[85%] rounded-painel border px-4 py-2.5 ${
+                                                ehMinha
+                                                    ? 'border-borda bg-neutro text-texto'
+                                                    : 'border-borda bg-fundo text-texto'
+                                            }`}
+                                        >
+                                            <p className="text-sm font-bold">
+                                                {ehMinha ? 'Você' : msg.remetente?.nome || 'Colega'}
+                                            </p>
+                                            <p className="mt-0.5 break-words">{msg.conteudo}</p>
+                                            <p className="mt-1 text-right text-sm text-texto-suave tabular-nums">
+                                                {formatarHora(msg.dataEnvio)}
+                                            </p>
                                         </div>
                                     </div>
                                 );
                             })
                         )}
-                        <div ref={messagesEndRef} />
+                        <div ref={fimMensagensRef} />
                     </div>
 
-                    {/* Input de Envio */}
-                    <div className="p-4 bg-white border-t border-gray-100 shrink-0">
-                        <form onSubmit={handleEnviarMensagem} className="flex gap-2">
-                            <input
-                                type="text"
-                                value={novoConteudo}
-                                onChange={(e) => setNovoConteudo(e.target.value)}
-                                placeholder="Digite sua mensagem..."
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            />
-                            <button
-                                type="submit"
-                                disabled={enviando || !novoConteudo.trim()}
-                                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                            >
-                                <Send className="w-5 h-5" />
-                            </button>
+                    {souParticipante && (
+                        <form
+                            onSubmit={handleEnviarMensagem}
+                            className="border-t border-borda bg-fundo p-4 space-y-2"
+                        >
+                            <label htmlFor="chat-mensagem" className="rotulo">
+                                Escrever mensagem
+                            </label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <input
+                                    id="chat-mensagem"
+                                    type="text"
+                                    maxLength={2000}
+                                    value={novoConteudo}
+                                    onChange={(e) => setNovoConteudo(e.target.value)}
+                                    placeholder="Digite sua mensagem..."
+                                    className="campo flex-1"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={enviando || !novoConteudo.trim()}
+                                    className="botao-primario shrink-0"
+                                >
+                                    <Send className="w-4 h-4" aria-hidden="true" />
+                                    {enviando ? 'Enviando...' : 'Enviar mensagem'}
+                                </button>
+                            </div>
                         </form>
-                    </div>
-                </div>
+                    )}
+                </section>
 
-                {/* Coluna Lateral: Comprovantes */}
-                <div className="w-full lg:w-80 flex flex-col gap-4">
-                    <UploadComprovantes 
-                        atividadeId={atividade.id} 
-                        statusAtual={atividade.status} 
+                <div className="lg:col-span-5">
+                    <UploadComprovantes
+                        atividadeId={atividade.id}
+                        statusAtual={atividade.status}
                         ofertanteId={atividade.ofertanteId}
                         compradorId={atividade.compradorId}
                         rodadaAtual={atividade.revisoesComprovantes}
                         feedbackConferencia={atividade.feedbackConferencia}
-                        onUploadSuccess={fetchData}
+                        onUploadSuccess={carregar}
                     />
                 </div>
             </div>

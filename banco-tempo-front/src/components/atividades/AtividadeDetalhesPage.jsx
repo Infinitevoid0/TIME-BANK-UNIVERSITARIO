@@ -27,37 +27,45 @@ const AtividadeDetalhesPage = () => {
         anexos: [],
         historico: [],
     });
+    const [tentativa, setTentativa] = useState(0);
     const [confirmandoPedido, setConfirmandoPedido] = useState(false);
 
-    const carregar = useCallback(async () => {
-        setEstado((atual) => ({ ...atual, carregando: true, erro: '' }));
-        try {
-            const atividade = await getAtividade(id);
-            const [anexos, historico] = await Promise.all([
-                getAnexos(id).catch(() => []),
-                getHistorico(id).catch(() => []),
-            ]);
-            setEstado({
-                carregando: false,
-                erro: '',
-                atividade,
-                anexos: anexos || [],
-                historico: historico || [],
-            });
-        } catch (e) {
-            setEstado({
-                carregando: false,
-                erro: mensagemDeErro(e, 'Não foi possível carregar os detalhes agora.'),
-                atividade: null,
-                anexos: [],
-                historico: [],
-            });
-        }
-    }, [id]);
-
     useEffect(() => {
-        carregar();
-    }, [carregar]);
+        let ativo = true;
+        Promise.all([
+            getAtividade(id),
+            getAnexos(id).catch(() => []),
+            getHistorico(id).catch(() => []),
+        ])
+            .then(([atividade, anexos, historico]) => {
+                if (!ativo) return;
+                setEstado({
+                    carregando: false,
+                    erro: '',
+                    atividade,
+                    anexos: anexos || [],
+                    historico: historico || [],
+                });
+            })
+            .catch((e) => {
+                if (!ativo) return;
+                setEstado({
+                    carregando: false,
+                    erro: mensagemDeErro(e, 'Não foi possível carregar os detalhes agora.'),
+                    atividade: null,
+                    anexos: [],
+                    historico: [],
+                });
+            });
+        return () => {
+            ativo = false;
+        };
+    }, [id, tentativa]);
+
+    const carregar = useCallback(() => {
+        setEstado((atual) => ({ ...atual, carregando: true, erro: '' }));
+        setTentativa((t) => t + 1);
+    }, []);
 
     if (estado.carregando) {
         return <Carregando texto="Carregando detalhes" linhas={3} />;

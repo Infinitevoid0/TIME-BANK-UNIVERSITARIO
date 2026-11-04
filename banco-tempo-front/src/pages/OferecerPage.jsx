@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CircleAlert, Paperclip, Trash2 } from 'lucide-react';
 import { createAtividade, corrigirAtividade, getAtividade, uploadAnexo } from '../services/atividadeService';
 import { getDisciplinas } from '../services/catalogo';
+import { textoPlanoDoHtml } from '../services/formatos';
 import { mensagemDeErro } from '../services/mensagens';
 import { useToast } from '../hooks/useToast';
 import Campo from '../components/ui/Campo';
-import RichTextEditor, { textoPlanoDoHtml } from '../components/ui/RichTextEditor';
+import RichTextEditor from '../components/ui/RichTextEditor';
 import { Carregando, ErroCarregar } from '../components/ui/Estados';
 
 const TITULO_MIN = 5;
@@ -73,8 +74,6 @@ const OferecerPage = () => {
     useEffect(() => {
         if (!modoCorrecao) return undefined;
         let ativo = true;
-        setCarregandoInicial(true);
-        setErroInicial('');
         getAtividade(id)
             .then((a) => {
                 if (!ativo) return;

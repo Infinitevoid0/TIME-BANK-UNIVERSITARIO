@@ -1,6 +1,6 @@
-import { useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { textoPlanoDoHtml } from '../../services/formatos';
 
 // Só o que o servidor aceita na descrição: negrito, itálico, lista e link.
 const modules = {
@@ -14,15 +14,6 @@ const modules = {
 
 const formats = ['bold', 'italic', 'list', 'link'];
 
-export const textoPlanoDoHtml = (html = '') => {
-    if (!html) return '';
-    return html
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-};
-
 const RichTextEditor = ({
     value,
     onChange,
@@ -32,36 +23,19 @@ const RichTextEditor = ({
     onLengthChange,
     invalido = false,
 }) => {
-    const quillRef = useRef(null);
-
-    // Usa o getText() do próprio Quill, que adiciona uma quebra de linha ao final.
-    const medirTexto = () => {
-        const editor = quillRef.current?.getEditor();
-        if (!editor) return textoPlanoDoHtml(value).length;
-        const text = editor.getText();
-        return Math.max(0, text.trim().length);
-    };
-
-    const charCount = medirTexto();
+    const charCount = textoPlanoDoHtml(value).length;
     const acimaDoLimite = charCount > maxLength;
 
     const handleChange = (html) => {
         onChange(html);
         if (onLengthChange) {
-            const editor = quillRef.current?.getEditor();
-            if (editor) {
-                const text = editor.getText();
-                onLengthChange(Math.max(0, text.trim().length));
-            } else {
-                onLengthChange(textoPlanoDoHtml(html).length);
-            }
+            onLengthChange(textoPlanoDoHtml(html).length);
         }
     };
 
     return (
         <div className={invalido || acimaDoLimite ? 'editor-invalido' : ''}>
             <ReactQuill
-                ref={quillRef}
                 theme="snow"
                 value={value}
                 onChange={handleChange}

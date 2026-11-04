@@ -1,49 +1,70 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao, moderacaoFinal, cancelarTroca, baixarAnexo } from '../../services/atividadeService';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, Check, Download, Paperclip, PencilLine } from 'lucide-react';
+import {
+    baixarAnexo,
+    cancelarTroca,
+    getAnexos,
+    getAtividade,
+    moderacaoFinal,
+    moderarAtividade,
+    reprovarAtividade,
+    solicitarCorrecao,
+} from '../../services/atividadeService';
+import { formatarData } from '../../services/formatos';
 import { mensagemDeErro } from '../../services/mensagens';
-import DescricaoSegura from '../ui/DescricaoSegura';
 import { useToast } from '../../hooks/useToast';
-import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle, Edit2 } from 'lucide-react';
+import Avatar from '../ui/Avatar';
+import Campo from '../ui/Campo';
+import ChipHoras from '../ui/ChipHoras';
+import ChipStatus from '../ui/ChipStatus';
+import DescricaoSegura from '../ui/DescricaoSegura';
+import { Carregando, ErroCarregar } from '../ui/Estados';
 import Modal from '../ui/Modal';
 
 const ModeracaoDetalhesPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const toast = useToast();
+
     const [atividade, setAtividade] = useState(null);
     const [anexos, setAnexos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [erro, setErro] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
-    const [showCorrecaoModal, setShowCorrecaoModal] = useState(false);
+
+    // Diálogo ativo: 'correcao' | 'revisao' | 'reprovar' | 'invalidar' | 'cancelar' | null
+    const [dialogo, setDialogo] = useState(null);
     const [feedbackTexto, setFeedbackTexto] = useState('');
-    const toast = useToast();
+    const [erroFeedback, setErroFeedback] = useState('');
+
+    const carregar = useCallback(async () => {
+        setLoading(true);
+        setErro('');
+        try {
+            const data = await getAtividade(id);
+            setAtividade(data);
+            const anexosData = await getAnexos(id).catch(() => []);
+            setAnexos(anexosData || []);
+        } catch (error) {
+            setErro(mensagemDeErro(error, 'Não encontramos esta oferta ou troca.'));
+        } finally {
+            setLoading(false);
+        }
+    }, [id]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await getAtividade(id);
-                setAtividade(data);
-                try {
-                    const anexosData = await getAnexos(id);
-                    setAnexos(anexosData);
-                } catch { /* Sem anexos */ }
-            } catch (error) {
-                toast.error(mensagemDeErro(error, 'Não encontramos esta atividade.'));
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [id]);
+        carregar();
+    }, [carregar]);
 
     const handleAprovar = async () => {
         setActionLoading(true);
         try {
             await moderarAtividade(atividade.id, 2);
-            toast.success('Atividade aprovada com sucesso!');
+            toast.success('Oferta aprovada e publicada.');
             navigate('/moderacao');
         } catch (error) {
-            toast.error(mensagemDeErro(error, 'Erro ao aprovar atividade.'));
+            toast.error(mensagemDeErro(error, 'Não foi possível aprovar a oferta agora.'));
         } finally {
             setActionLoading(false);
         }
@@ -53,10 +74,11 @@ const ModeracaoDetalhesPage = () => {
         setActionLoading(true);
         try {
             await reprovarAtividade(atividade.id);
-            toast.success('Atividade reprovada.');
+            toast.success('Oferta marcada como não aceita.');
+            setDialogo(null);
             navigate('/moderacao');
         } catch (error) {
-            toast.error(mensagemDeErro(error, 'Erro ao reprovar atividade.'));
+            toast.error(mensagemDeErro(error, 'Não foi possível recusar a oferta agora.'));
         } finally {
             setActionLoading(false);
         }
@@ -64,50 +86,56 @@ const ModeracaoDetalhesPage = () => {
 
     const handleSolicitarCorrecao = async () => {
         if (!feedbackTexto.trim()) {
-            toast.error("O feedback não pode estar vazio.");
+            setErroFeedback('Escreva o que a pessoa precisa ajustar na oferta.');
             return;
         }
-
         setActionLoading(true);
         try {
-            await solicitarCorrecao(atividade.id, feedbackTexto);
-            toast.success("Correção solicitada com sucesso. O aluno foi notificado.");
+            await solicitarCorrecao(atividade.id, feedbackTexto.trim());
+            toast.success('Pedido de ajuste enviado.');
+            setDialogo(null);
             navigate('/moderacao');
         } catch (error) {
-            toast.error(mensagemDeErro(error, 'Erro ao solicitar correção.'));
+            toast.error(mensagemDeErro(error, 'Não foi possível enviar o pedido de ajuste.'));
         } finally {
             setActionLoading(false);
-            setShowCorrecaoModal(false);
         }
     };
 
     const handleModeracaoFinal = async (acao) => {
         if (acao === 'NecessitaRevisao' && !feedbackTexto.trim()) {
-            toast.error("O feedback não pode estar vazio para solicitar revisão.");
+            setErroFeedback('Explique o que precisa ser ajustado nos comprovantes.');
             return;
         }
-
         setActionLoading(true);
         try {
-            await moderacaoFinal(atividade.id, acao, acao === 'NecessitaRevisao' ? feedbackTexto : null);
-            toast.success(acao === 'Validar' ? 'Transação validada com sucesso!' : (acao === 'Invalidar' ? 'Transação invalidada.' : 'Revisão solicitada aos usuários.'));
+            await moderacaoFinal(
+                atividade.id,
+                acao,
+                acao === 'NecessitaRevisao' ? feedbackTexto.trim() : null
+            );
+            if (acao === 'Validar') {
+                toast.success('Troca concluída e horas registradas.');
+            } else if (acao === 'Invalidar') {
+                toast.success('Troca encerrada e horas devolvidas a quem pediu.');
+            } else {
+                toast.success('Pedido de ajuste nos comprovantes enviado.');
+            }
+            setDialogo(null);
             navigate('/moderacao');
         } catch (error) {
-            toast.error(mensagemDeErro(error, 'Erro ao processar moderação final.'));
+            toast.error(mensagemDeErro(error, 'Não foi possível concluir a conferência agora.'));
         } finally {
             setActionLoading(false);
-            if (acao === 'NecessitaRevisao') setShowCorrecaoModal(false);
         }
     };
 
     const handleCancelarTroca = async () => {
-        if (!window.confirm('Cancelar esta troca? As horas reservadas voltam para quem pediu e a troca não pode ser retomada.')) {
-            return;
-        }
         setActionLoading(true);
         try {
-            await cancelarTroca(atividade.id, null);
+            await cancelarTroca(atividade.id, feedbackTexto.trim() || null);
             toast.success('Troca cancelada. As horas voltaram para quem pediu.');
+            setDialogo(null);
             navigate('/moderacao');
         } catch (error) {
             toast.error(mensagemDeErro(error, 'Não foi possível cancelar a troca agora.'));
@@ -116,98 +144,119 @@ const ModeracaoDetalhesPage = () => {
         }
     };
 
-    if (loading) return <div className="flex justify-center mt-20"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
-    if (!atividade) return <div className="text-center mt-20 text-gray-500">Atividade não encontrada.</div>;
+    const abrirDialogo = (tipo) => {
+        setFeedbackTexto('');
+        setErroFeedback('');
+        setDialogo(tipo);
+    };
+
+    if (loading) {
+        return <Carregando texto="Carregando item da moderação" linhas={3} />;
+    }
+
+    if (erro || !atividade) {
+        return (
+            <div className="max-w-[42.5rem] space-y-4">
+                <Link to="/moderacao" className="botao-terciario">
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar para Moderação
+                </Link>
+                <ErroCarregar mensagem={erro || 'Oferta ou troca não encontrada.'} aoTentar={carregar} />
+            </div>
+        );
+    }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <button onClick={() => navigate(-1)} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer">
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Voltar
-            </button>
+        <div className="max-w-[42.5rem] space-y-6">
+            <div>
+                <Link to="/moderacao" className="botao-terciario">
+                    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                    Voltar para Moderação
+                </Link>
+            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-100">
-                    <div className="flex items-start justify-between">
-                        <h1 className="text-2xl font-bold text-gray-900">{atividade.titulo}</h1>
-                        <div className="flex gap-2">
-                            {atividade.status === 1 && (
-                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                                    Pendente
-                                </span>
-                            )}
-                            {atividade.status === 5 && (
-                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                                    Retorno de Correção
-                                </span>
-                            )}
-                            {atividade.status === 7 && (
-                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                                    Aguardando Validação
-                                </span>
-                            )}
-                            {atividade.status === 8 && (
-                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                                    Necessita Revisão
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                            {atividade.custoHoras} hora{atividade.custoHoras > 1 ? 's' : ''}
-                        </div>
-                        <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                            {new Date(atividade.dataCriacao).toLocaleDateString()}
-                        </div>
+            <section className="painel p-5 sm:p-6 space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <h1 className="break-words">{atividade.titulo}</h1>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <ChipHoras horas={atividade.custoHoras} />
+                        <ChipStatus status={atividade.status} />
                     </div>
                 </div>
 
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Ofertante</h3>
-                    <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
-                            <User className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                                {atividade.ofertante?.nome || 'N/A'}
-                            </p>
+                {atividade.dataCriacao && (
+                    <p className="inline-flex items-center gap-1.5 text-sm text-texto-suave">
+                        <Calendar className="w-4 h-4 shrink-0" aria-hidden="true" />
+                        Enviada em {formatarData(atividade.dataCriacao)}
+                    </p>
+                )}
+
+                <dl className="grid gap-3 border-t border-borda pt-4 sm:grid-cols-2">
+                    <div className="flex items-center gap-3 rounded-campo border border-borda bg-fundo p-3">
+                        <Avatar nome={atividade.ofertante?.nome || 'Colega'} />
+                        <div className="min-w-0">
+                            <dt className="text-sm text-texto-suave">Quem oferece</dt>
+                            <dd className="font-bold truncate">{atividade.ofertante?.nome || 'Colega'}</dd>
                         </div>
                     </div>
-                </div>
 
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Descrição</h3>
+                    {atividade.comprador && (
+                        <div className="flex items-center gap-3 rounded-campo border border-borda bg-fundo p-3">
+                            <Avatar nome={atividade.comprador?.nome || 'Colega'} />
+                            <div className="min-w-0">
+                                <dt className="text-sm text-texto-suave">Quem pediu</dt>
+                                <dd className="font-bold truncate">{atividade.comprador?.nome || 'Colega'}</dd>
+                            </div>
+                        </div>
+                    )}
+                </dl>
+
+                <div className="border-t border-borda pt-4 space-y-2">
+                    <h2 className="text-xl">Descrição</h2>
                     <DescricaoSegura
                         html={atividade.descricao}
-                        className="text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
+                        className="descricao-rica text-texto max-w-[70ch]"
                     />
                 </div>
 
                 {anexos.length > 0 && (
-                    <div className="p-6 border-b border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                            <Paperclip className="w-4 h-4 inline mr-1" />
-                            Documentos Anexados
-                        </h3>
-                        <ul className="space-y-2">
-                            {anexos.map(anexo => (
-                                <li key={anexo.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <span className="text-sm text-gray-700 truncate">{anexo.nomeArquivo}</span>
-                                    <span className="text-xs text-gray-500 mx-2 whitespace-nowrap">
-                                        {anexo.finalidade === 1 ? 'Anexo da oferta' : (anexo.enviadoPorId === atividade.ofertanteId ? 'De quem ofereceu' : 'De quem pediu')}
-                                        {anexo.finalidade === 2 && atividade.revisoesComprovantes > 0 ? ` (rodada ${anexo.rodada + 1})` : ''}
-                                    </span>
+                    <div className="border-t border-borda pt-4 space-y-3">
+                        <h2 className="text-xl">Arquivos anexados</h2>
+                        <ul className="divide-y divide-borda rounded-campo border border-borda">
+                            {anexos.map((anexo) => (
+                                <li
+                                    key={anexo.id}
+                                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="inline-flex items-center gap-2 font-semibold break-all">
+                                            <Paperclip className="w-4 h-4 shrink-0 text-texto-suave" aria-hidden="true" />
+                                            {anexo.nomeArquivo}
+                                        </p>
+                                        <p className="text-sm text-texto-suave">
+                                            {anexo.finalidade === 1
+                                                ? 'Material da oferta'
+                                                : anexo.enviadoPorId === atividade.ofertanteId
+                                                  ? 'Comprovante de quem oferece'
+                                                  : 'Comprovante de quem pediu'}
+                                            {anexo.finalidade === 2 && atividade.revisoesComprovantes > 0
+                                                ? ` (rodada ${anexo.rodada + 1})`
+                                                : ''}
+                                        </p>
+                                    </div>
                                     <button
                                         type="button"
-                                        onClick={() => baixarAnexo(anexo).catch((e) => toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.')))}
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none"
+                                        onClick={() =>
+                                            baixarAnexo(anexo).catch((e) =>
+                                                toast.error(
+                                                    mensagemDeErro(e, 'Não foi possível baixar o arquivo.')
+                                                )
+                                            )
+                                        }
+                                        className="botao-secundario"
                                     >
-                                        <Download className="w-4 h-4 mr-1" aria-hidden="true" />
-                                        Baixar
+                                        <Download className="w-4 h-4" aria-hidden="true" />
+                                        Baixar arquivo
                                     </button>
                                 </li>
                             ))}
@@ -215,47 +264,47 @@ const ModeracaoDetalhesPage = () => {
                     </div>
                 )}
 
-                <div className="p-6 bg-gray-50 flex justify-end gap-3">
-                    {/* Botões de Moderação Inicial */}
+                <div className="flex flex-wrap items-center gap-3 border-t border-borda pt-5">
                     {(atividade.status === 1 || atividade.status === 5) && (
                         <>
                             <button
-                                onClick={handleReprovar}
+                                type="button"
+                                onClick={handleAprovar}
                                 disabled={actionLoading}
-                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
+                                className="botao-primario"
                             >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Reprovar Totalmente
+                                <Check className="w-4 h-4" aria-hidden="true" />
+                                Aprovar oferta
                             </button>
                             {atividade.status === 1 && (
                                 <button
-                                    onClick={() => setShowCorrecaoModal(true)}
+                                    type="button"
+                                    onClick={() => abrirDialogo('correcao')}
                                     disabled={actionLoading}
-                                    className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
+                                    className="botao-secundario"
                                 >
-                                    <Edit2 className="w-4 h-4 mr-2" />
-                                    Solicitar Correção
+                                    <PencilLine className="w-4 h-4" aria-hidden="true" />
+                                    Pedir ajuste na oferta
                                 </button>
                             )}
                             <button
-                                onClick={handleAprovar}
+                                type="button"
+                                onClick={() => abrirDialogo('reprovar')}
                                 disabled={actionLoading}
-                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70 transition-colors"
+                                className="botao-secundario"
                             >
-                                <Check className="w-4 h-4 mr-2" />
-                                Aprovar Atividade
+                                Não aceitar oferta
                             </button>
                         </>
                     )}
 
-                    {/* Botões de Moderação Final */}
                     {(atividade.status === 6 || atividade.status === 8) && (
                         <button
-                            onClick={handleCancelarTroca}
+                            type="button"
+                            onClick={() => abrirDialogo('cancelar')}
                             disabled={actionLoading}
-                            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-100 disabled:opacity-70 transition-colors"
+                            className="botao-secundario"
                         >
-                            <XCircle className="w-4 h-4 mr-2" aria-hidden="true" />
                             Cancelar troca e devolver horas
                         </button>
                     )}
@@ -263,79 +312,173 @@ const ModeracaoDetalhesPage = () => {
                     {atividade.status === 7 && (
                         <>
                             <button
-                                onClick={() => handleModeracaoFinal('Invalidar')}
+                                type="button"
+                                onClick={() => handleModeracaoFinal('Validar')}
                                 disabled={actionLoading}
-                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-70 transition-colors"
+                                className="botao-primario"
                             >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Invalidar Transação
+                                <Check className="w-4 h-4" aria-hidden="true" />
+                                Confirmar que foi feito
                             </button>
                             {atividade.revisoesComprovantes === 0 && (
                                 <button
-                                    onClick={() => setShowCorrecaoModal(true)}
+                                    type="button"
+                                    onClick={() => abrirDialogo('revisao')}
                                     disabled={actionLoading}
-                                    className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-orange-700 bg-white border border-orange-300 rounded-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70 transition-colors"
+                                    className="botao-secundario"
                                 >
-                                    <Edit2 className="w-4 h-4 mr-2" />
-                                    Solicitar Revisão
+                                    <PencilLine className="w-4 h-4" aria-hidden="true" />
+                                    Pedir ajuste nos comprovantes
                                 </button>
                             )}
                             <button
-                                onClick={() => handleModeracaoFinal('Validar')}
+                                type="button"
+                                onClick={() => abrirDialogo('invalidar')}
                                 disabled={actionLoading}
-                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70 transition-colors"
+                                className="botao-secundario"
                             >
-                                <Check className="w-4 h-4 mr-2" />
-                                Validar Transação
+                                Não validar e devolver horas
                             </button>
                         </>
                     )}
                 </div>
-            </div>
+            </section>
 
-            {showCorrecaoModal && (
-                <Modal
-                    isOpen={showCorrecaoModal}
-                    onClose={() => setShowCorrecaoModal(false)}
-                    title={atividade.status === 7 ? "Solicitar Revisão de Comprovantes" : "Solicitar Correção"}
-                >
-                    <div className="space-y-4">
-                        <p className="text-sm text-gray-600">
-                            {atividade.status === 7 
-                                ? "Informe detalhadamente o que os usuários precisam corrigir nos comprovantes enviados."
-                                : "Informe ao aluno o que ele precisa corrigir na atividade antes de ser aprovada."}
-                        </p>
-                        <div>
+            <Modal
+                isOpen={dialogo === 'correcao' || dialogo === 'revisao'}
+                onClose={() => !actionLoading && setDialogo(null)}
+                title={
+                    dialogo === 'revisao'
+                        ? 'Pedir ajuste nos comprovantes'
+                        : 'Pedir ajuste na oferta'
+                }
+            >
+                <div className="space-y-4">
+                    <Campo
+                        id="moderacao-feedback"
+                        rotulo={
+                            dialogo === 'revisao'
+                                ? 'O que as duas pessoas precisam ajustar nos comprovantes?'
+                                : 'O que a pessoa precisa ajustar na oferta?'
+                        }
+                        ajuda="Até 1000 caracteres."
+                        erro={erroFeedback}
+                    >
+                        <textarea
+                            rows={4}
+                            maxLength={1000}
+                            className="campo"
+                            value={feedbackTexto}
+                            onChange={(e) => {
+                                setFeedbackTexto(e.target.value);
+                                if (erroFeedback) setErroFeedback('');
+                            }}
+                        />
+                    </Campo>
+                    <div className="flex flex-wrap justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setDialogo(null)}
+                            disabled={actionLoading}
+                            className="botao-secundario"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={
+                                dialogo === 'revisao'
+                                    ? () => handleModeracaoFinal('NecessitaRevisao')
+                                    : handleSolicitarCorrecao
+                            }
+                            disabled={actionLoading}
+                            className="botao-primario"
+                        >
+                            {actionLoading ? 'Enviando...' : 'Enviar pedido de ajuste'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={dialogo === 'reprovar'}
+                onClose={() => !actionLoading && setDialogo(null)}
+                title="Não aceitar oferta"
+            >
+                <div className="space-y-4">
+                    <p>
+                        Confirmar que a oferta <strong>{atividade.titulo}</strong> não será publicada? Ela ficará com o status "Não aceito ou cancelado" e quem ofereceu poderá excluí-la.
+                    </p>
+                    <div className="flex flex-wrap justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setDialogo(null)}
+                            disabled={actionLoading}
+                            className="botao-secundario"
+                        >
+                            Voltar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleReprovar}
+                            disabled={actionLoading}
+                            className="botao-primario"
+                        >
+                            {actionLoading ? 'Confirmando...' : 'Confirmar que não foi aceita'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={dialogo === 'invalidar' || dialogo === 'cancelar'}
+                onClose={() => !actionLoading && setDialogo(null)}
+                title="Cancelar troca e devolver horas"
+            >
+                <div className="space-y-4">
+                    <p>
+                        As <strong>{atividade.custoHoras} h</strong> reservadas voltam para{' '}
+                        <strong>{atividade.comprador?.nome || 'quem pediu'}</strong> e a troca é encerrada definitivamente.
+                    </p>
+                    {dialogo === 'cancelar' && (
+                        <Campo
+                            id="moderacao-motivo-cancelar"
+                            rotulo="Motivo (opcional)"
+                            ajuda="Visível para quem participa da troca."
+                        >
                             <textarea
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                rows="5"
-                                placeholder="Digite o feedback detalhado..."
+                                rows={3}
+                                maxLength={500}
+                                className="campo"
                                 value={feedbackTexto}
                                 onChange={(e) => setFeedbackTexto(e.target.value)}
-                                maxLength={1000}
                             />
-                            <div className="text-right text-xs text-gray-400 mt-1">
-                                {feedbackTexto.length}/1000
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button
-                                onClick={() => setShowCorrecaoModal(false)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={atividade.status === 7 ? () => handleModeracaoFinal('NecessitaRevisao') : handleSolicitarCorrecao}
-                                disabled={actionLoading || !feedbackTexto.trim()}
-                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-70"
-                            >
-                                {actionLoading ? 'Enviando...' : 'Enviar Solicitação'}
-                            </button>
-                        </div>
+                        </Campo>
+                    )}
+                    <div className="flex flex-wrap justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setDialogo(null)}
+                            disabled={actionLoading}
+                            className="botao-secundario"
+                        >
+                            Voltar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={
+                                dialogo === 'invalidar'
+                                    ? () => handleModeracaoFinal('Invalidar')
+                                    : handleCancelarTroca
+                            }
+                            disabled={actionLoading}
+                            className="botao-primario"
+                        >
+                            {actionLoading ? 'Confirmando...' : 'Confirmar e devolver horas'}
+                        </button>
                     </div>
-                </Modal>
-            )}
+                </div>
+            </Modal>
         </div>
     );
 };
