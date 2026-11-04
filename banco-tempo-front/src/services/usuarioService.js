@@ -31,3 +31,17 @@ export const updatePerfil = async (dados) => {
     const response = await api.put('/usuarios/me/perfil', dados);
     return response.data;
 };
+
+// Administração: baixa o CSV de eventos com pseudônimos (U01, U02...).
+export const exportarEventos = async () => {
+    const response = await api.get('/admin/eventos.csv', { responseType: 'blob' });
+    const nome = (response.headers['content-disposition'] || '').match(/filename="?([^";]+)"?/)?.[1] || 'eventos-banco-de-tempo.csv';
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+};

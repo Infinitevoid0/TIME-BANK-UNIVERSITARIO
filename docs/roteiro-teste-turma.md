@@ -54,7 +54,7 @@ Para o Theo, no notebook da equipe. Comandos no Git Bash, na raiz do repositóri
 ## 4. No fim da aula
 
 1. Exporte os eventos, ainda com o sistema no ar:
-   - pela página **Usuários** logado como administração, botão de exportar eventos (entra depois da tag `aula-pronta`; antes disso, use o comando abaixo);
+   - pela página **Usuários**, logado com a conta de administração, botão "Exportar eventos (CSV)" (não existe na tag `aula-pronta`; nela, use o comando abaixo);
    - ou direto do banco: `docker compose -f docker-compose.teste.yml --env-file .env.teste exec postgres psql -U bancotempo -d timebank -c "\copy (select * from \"EventosSistema\" order by \"Id\") to stdout with csv header" > eventos-bruto.csv`.
    - O CSV da rota usa pseudônimos (U01, U02...). O bruto tem o id interno: guarde-o só com a equipe.
 2. Rode as consultas de `docs/consultas-analise.sql`. A de conservação de horas tem que dar diferença zero.

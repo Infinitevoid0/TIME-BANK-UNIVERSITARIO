@@ -49,3 +49,13 @@ Cada linha: decisão e motivo.
 - O aceite do aviso do cadastro é obrigatório no servidor (`aceiteAviso`) e fica registrado pelo evento `usuario_cadastrado`. Motivo: não precisa de coluna nova para provar o aceite.
 - `ReferenceHandler.IgnoreCycles` mantido. Motivo: todas as respostas agora são DTOs sem ciclos, então ele não tem efeito; remover fica para depois do teste, sem risco hoje.
 - Contas de Development (README) só existem em Development; nos outros ambientes as contas da equipe vêm de `Equipe__Moderador__*` e `Equipe__Administrador__*`. Motivo: as senhas do README são públicas.
+
+## Limite de requisições e exportação (P0-9 e P0-10, depois da tag `aula-pronta`)
+
+- Rate limiter nativo com janela fixa de 1 minuto: quem está logado conta por pessoa (300 requisições), quem não está conta por IP (120). Motivo: a turma sai pelo mesmo IP; por IP, 40 pessoas entrando juntas estourariam um limite baixo.
+- Criação de oferta, pedido e mensagem: 10 por minuto por pessoa, um balde para cada tipo. Motivo: conversar no chat não pode bloquear um pedido de ajuda.
+- Janela fixa em vez de deslizante. Motivo: ela informa o `Retry-After`, que vai no cabeçalho e no texto da resposta 429.
+- `ForwardedHeaders` confia no `X-Forwarded-For` sem lista de proxies. Motivo: a API não tem porta publicada e só o nginx da rede interna fala com ela; o nginx põe ali o `CF-Connecting-IP` do túnel ou o endereço da conexão.
+- No máximo um evento `limite_excedido` por pessoa ou IP a cada minuto. Motivo: uma enxurrada de requisições recusadas não pode virar uma enxurrada de gravações no banco.
+- Pseudônimos do CSV (U01, U02...) seguem a ordem de cadastro. Motivo: toda conta tem um `usuario_cadastrado` ao nascer, então o pseudônimo de cada pessoa é o mesmo em qualquer exportação; a correspondência não é exportada.
+- O CSV tem só códigos, números e datas, nenhum texto digitado por usuário. Motivo: nada de dado pessoal e nenhum risco de fórmula injetada ao abrir na planilha.

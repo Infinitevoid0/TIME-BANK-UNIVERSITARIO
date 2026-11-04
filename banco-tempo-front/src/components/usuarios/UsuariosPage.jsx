@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getUsuarios } from '../../services/usuarioService';
+import { getUsuarios, exportarEventos } from '../../services/usuarioService';
+import { useAuth } from '../../hooks/useAuth';
+import { mensagemDeErro } from '../../services/mensagens';
 import api from '../../services/api';
 import UsuarioFormModal from './UsuarioFormModal';
 import { useToast } from '../../hooks/useToast';
@@ -18,6 +20,19 @@ const UsuariosPage = () => {
     const [filterCurso, setFilterCurso] = useState('');
     
     const toast = useToast();
+    const { isAdmin } = useAuth();
+    const [exportando, setExportando] = useState(false);
+
+    const handleExportar = async () => {
+        setExportando(true);
+        try {
+            await exportarEventos();
+        } catch (error) {
+            toast.error(mensagemDeErro(error, 'Não foi possível exportar os eventos agora.'));
+        } finally {
+            setExportando(false);
+        }
+    };
 
     useEffect(() => {
         carregarDados();
@@ -76,6 +91,16 @@ const UsuariosPage = () => {
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">Administre os alunos cadastrados no sistema.</p>
                 </div>
+                {isAdmin && (
+                    <button
+                        type="button"
+                        onClick={handleExportar}
+                        disabled={exportando}
+                        className="inline-flex items-center min-h-11 px-4 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                        {exportando ? 'Exportando...' : 'Exportar eventos (CSV)'}
+                    </button>
+                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
