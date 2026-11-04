@@ -52,11 +52,7 @@ const AtividadeDetalhesPage = () => {
     }, [id]);
 
     const handleComprar = async () => {
-        if (user.horas < atividade.custoHoras) {
-            toast.error(`Você está com ${user.horas} h agora e esta ajuda leva ${atividade.custoHoras} h. Quando alguém receber uma ajuda sua, as horas entram e você pode pedir.`);
-            return;
-        }
-
+        // Sem checagem local de horas: o servidor decide e a tentativa fica registrada como evento.
         setLoadingCompra(true);
         try {
             await comprarAtividade(atividade.id);
