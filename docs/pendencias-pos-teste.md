@@ -8,8 +8,6 @@
 - **Modalidade e disponibilidade (P2).** Campos previstos no formulário curto do DESIGN.md e ainda inexistentes na API.
 - **`exemplos.http`.** Os exemplos ainda usam as rotas antigas com ids no corpo e na query; atualizar para o contrato com token (`docs/contrato-api.md`).
 - **`ReferenceHandler.IgnoreCycles`.** Pode sair, porque todas as respostas são DTOs; ficou para não mexer na serialização antes da aula.
-- **Lint do front.** O `eslint` já acusava erros no `main` (contextos exportados junto com componentes, `ToastContext` usando função antes de declarar). Os arquivos novos não adicionaram erros; limpar o restante depois.
 - **Tamanho do pacote do front.** O build avisa que o JavaScript passa de 500 kB por causa do editor Quill; carregar o editor só na página de oferta.
-- **Remoção de arquivo pela interface.** A moderação só remove anexos impróprios pela API (`DELETE /api/anexos/{id}/arquivo`); falta botão na tela de moderação.
 - **Contas sem vínculo.** Excluir pessoa com ofertas, trocas ou mensagens dá 409 `EM_USO`; definir a política de anonimização ou exclusão em cascata depois do teste, junto com a LGPD.
 - **Branch `feat/anexos-e-seguranca`.** É mais antigo que o `main` e foi ignorado; decidir se ainda tem algo a aproveitar ou se pode ser apagado.
