@@ -48,10 +48,16 @@ public sealed class ConferenciaTests
         Assert.Equal(new Horas(1, 0, 0, 1), await Cenario.HorasAsync(bruno));
 
         var historico = await Cenario.HistoricoAsync(ana, atividadeId);
-        var transicoes = historico
-            .Where(e => e.StatusAnterior is not null)
-            .Select(e => (e.StatusAnterior, e.StatusNovo))
-            .ToList();
+        // Uma transição pode gerar mais de um evento (ex.: transição e movimento de horas); conta a sequência de mudanças.
+        var transicoes = new List<(int?, int?)>();
+        foreach (var evento in historico.Where(e => e.StatusAnterior is not null))
+        {
+            var par = (evento.StatusAnterior, evento.StatusNovo);
+            if (transicoes.Count == 0 || transicoes[^1] != par)
+            {
+                transicoes.Add(par);
+            }
+        }
         Assert.Equal(new (int?, int?)[] { (1, 2), (2, 6), (6, 7), (7, 9) }, transicoes);
         var datas = historico.Select(e => e.OcorridoEm).ToList();
         Assert.All(datas, d => Assert.NotNull(d));
@@ -77,7 +83,9 @@ public sealed class ConferenciaTests
         Assert.Equal(9, await _cenario.StatusNoBancoAsync(troca.AtividadeId));
         Assert.Equal(new Horas(3, 0, 1, 0), await Cenario.HorasAsync(troca.Oferece));
         Assert.Equal(new Horas(1, 0, 0, 1), await Cenario.HorasAsync(troca.Pede));
-        Assert.Single(await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId), e => e.StatusNovo == 9);
+        var historico = await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId);
+        Assert.Contains(historico, e => e.StatusAnterior == 7 && e.StatusNovo == 9);
+        Assert.All(historico.Where(e => e.StatusNovo == 9).GroupBy(e => e.Tipo), grupo => Assert.Single(grupo));
     }
 
     [Fact]

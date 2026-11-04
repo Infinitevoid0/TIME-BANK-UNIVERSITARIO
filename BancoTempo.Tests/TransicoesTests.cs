@@ -50,16 +50,17 @@ public sealed class TransicoesTests
         Assert.Equal(10, await _cenario.StatusNoBancoAsync(troca.AtividadeId));
         Assert.Equal(new Horas(2, 0, 0, 0), await Cenario.HorasAsync(troca.Pede));
         Assert.Equal(2, (await Cenario.HorasAsync(troca.Oferece)).Atuais);
-        var eventosDoCancelamento = (await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId))
-            .Where(e => e.StatusAnterior == 6 && e.StatusNovo == 10)
-            .ToList();
-        var evento = Assert.Single(eventosDoCancelamento);
-        Assert.Equal("transicao_aplicada", evento.Tipo);
+        Assert.Single(await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId), EhCancelamentoAplicado);
 
         var segundoCancelamento = await Cenario.CancelarTrocaAsync(troca.Moderacao, troca.AtividadeId);
 
-        await segundoCancelamento.DeveResponder(HttpStatusCode.Conflict);
+        await segundoCancelamento.DeveResponder(HttpStatusCode.Conflict, "TRANSICAO_INVALIDA");
         Assert.Equal(new Horas(2, 0, 0, 0), await Cenario.HorasAsync(troca.Pede));
-        Assert.Single(await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId), e => e.StatusNovo == 10);
+        var historico = await Cenario.HistoricoAsync(troca.Moderacao, troca.AtividadeId);
+        Assert.Single(historico, EhCancelamentoAplicado);
+        Assert.All(historico.Where(e => e.StatusNovo == 10).GroupBy(e => e.Tipo), grupo => Assert.Single(grupo));
     }
+
+    private static bool EhCancelamentoAplicado(Evento evento) =>
+        evento.Tipo == "transicao_aplicada" && evento.StatusAnterior == 6 && evento.StatusNovo == 10;
 }
