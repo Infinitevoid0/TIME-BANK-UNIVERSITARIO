@@ -39,7 +39,7 @@ const Sidebar = () => {
                     </div>
                     <p className="text-xs text-gray-500 truncate mt-1">{user?.email}</p>
                     <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Saldo: {user?.saldoHoras} horas
+                        Suas horas: {user?.horas} h
                     </div>
                 </div>
             </div>

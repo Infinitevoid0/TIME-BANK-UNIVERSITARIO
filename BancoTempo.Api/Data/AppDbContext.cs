@@ -14,9 +14,28 @@ public class AppDbContext : DbContext
     public DbSet<AnexoAtividade> AnexosAtividades { get; set; }
     public DbSet<ChatPrivado> Chats { get; set; }
     public DbSet<MensagemChat> Mensagens { get; set; }
+    public DbSet<EventoSistema> EventosSistema { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Integridade das horas no próprio banco. O limite de 4 h espelha BancoTempo:HorasMaximasPorOferta;
+        // aumentar o limite pede uma migração nova.
+        modelBuilder.Entity<Usuario>()
+            .ToTable(t => t.HasCheckConstraint("CK_Usuarios_SaldoHoras_NaoNegativo", "\"SaldoHoras\" >= 0"));
+        modelBuilder.Entity<Atividade>()
+            .ToTable(t => t.HasCheckConstraint("CK_Atividades_CustoHoras_Faixa", "\"CustoHoras\" BETWEEN 1 AND 4"));
+
+        modelBuilder.Entity<EventoSistema>(e =>
+        {
+            e.ToTable("EventosSistema");
+            e.Property(x => x.Tipo).HasMaxLength(40);
+            e.Property(x => x.PapelAtor).HasMaxLength(20);
+            e.Property(x => x.CodigoMotivo).HasMaxLength(40);
+            e.Property(x => x.IdRastreio).HasMaxLength(80);
+            e.HasIndex(x => x.AtividadeId);
+            e.HasIndex(x => x.OcorridoEm);
+        });
+
         // 1. Curso -> Disciplina
         modelBuilder.Entity<Disciplina>()
             .HasOne(d => d.Curso)

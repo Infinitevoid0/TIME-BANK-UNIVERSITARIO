@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { UploadCloud, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { enviarComprovante, getAnexos } from '../../services/atividadeService';
+import { enviarComprovante, getAnexos, baixarAnexo } from '../../services/atividadeService';
+import { mensagemDeErro } from '../../services/mensagens';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 
-const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId, onUploadSuccess }) => {
+const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId, rodadaAtual = 0, feedbackConferencia, onUploadSuccess }) => {
     const { user } = useAuth();
     const toast = useToast();
     const fileInputRef = useRef(null);
@@ -39,20 +40,20 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
             return;
         }
 
-        // Validação de tamanho (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("O arquivo excede o limite de 5MB.");
+        // Mesmo limite do servidor (10 MB)
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("O arquivo passa de 10 MB. Envie um menor.");
             return;
         }
 
         setUploading(true);
         try {
-            await enviarComprovante(atividadeId, file, user.id);
-            toast.success("Comprovante enviado com sucesso!");
+            await enviarComprovante(atividadeId, file);
+            toast.success("Comprovante enviado.");
             await fetchAnexos();
             if (onUploadSuccess) onUploadSuccess();
-        } catch {
-            toast.error("Erro ao enviar o comprovante.");
+        } catch (error) {
+            toast.error(mensagemDeErro(error, "O comprovante não foi enviado. Tente de novo."));
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -68,8 +69,10 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
     };
 
     // Análise de quem já enviou
-    const ofertanteEnviou = anexos.some(a => a.enviadoPorId != null && a.enviadoPorId === ofertanteId);
-    const compradorEnviou = anexos.some(a => a.enviadoPorId != null && a.enviadoPorId === compradorId);
+    // Só contam os comprovantes da rodada atual (depois de um pedido de ajuste, as duas partes enviam de novo).
+    const comprovantesDaRodada = anexos.filter(a => a.finalidade === 2 && a.rodada === rodadaAtual);
+    const ofertanteEnviou = comprovantesDaRodada.some(a => a.enviadoPorId === ofertanteId);
+    const compradorEnviou = comprovantesDaRodada.some(a => a.enviadoPorId === compradorId);
     
     // Pode enviar se estiver em Execução (6) ou Necessita Revisão (8)
     const canUpload = (statusAtual === 6 || statusAtual === 8);
@@ -85,7 +88,7 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
             {/* Painel de Status */}
             <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 font-medium">Ofertante</span>
+                    <span className="text-gray-600 font-medium">{user?.id === ofertanteId ? "Você (ofereceu)" : "Quem ofereceu"}</span>
                     {ofertanteEnviou ? (
                         <span className="flex items-center text-emerald-600"><CheckCircle className="w-4 h-4 mr-1" /> Enviado</span>
                     ) : (
@@ -93,7 +96,7 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
                     )}
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 font-medium">Comprador</span>
+                    <span className="text-gray-600 font-medium">{user?.id === compradorId ? "Você (pediu)" : "Quem pediu"}</span>
                     {compradorEnviou ? (
                         <span className="flex items-center text-emerald-600"><CheckCircle className="w-4 h-4 mr-1" /> Enviado</span>
                     ) : (
@@ -105,7 +108,7 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
             {statusAtual === 8 && (
                 <div className="flex items-start gap-2 text-orange-700 bg-orange-50 p-3 rounded-lg text-xs border border-orange-100">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <p>A moderação solicitou revisão nos comprovantes. Por favor, enviem novas evidências claras.</p>
+                    <p>A moderação pediu ajuste nos comprovantes. As duas pessoas precisam enviar de novo.{feedbackConferencia ? ` Recado da moderação: ${feedbackConferencia}` : ''}</p>
                 </div>
             )}
 
@@ -137,7 +140,7 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
                         <div className="flex flex-col items-center justify-center text-gray-500">
                             <UploadCloud className="w-8 h-8 mb-2 text-gray-400" />
                             <p className="text-sm font-medium text-gray-700 mb-1">Clique ou arraste aqui</p>
-                            <p className="text-xs">PDF, PNG ou JPG (Máx 5MB)</p>
+                            <p className="text-xs">PDF, PNG ou JPG (até 10 MB)</p>
                         </div>
                     )}
                 </div>
@@ -154,19 +157,18 @@ const UploadComprovantes = ({ atividadeId, statusAtual, ofertanteId, compradorId
                     <ul className="space-y-2">
                         {anexos.map((anexo, idx) => (
                             <li key={idx} className="flex flex-col bg-white border border-gray-200 rounded p-2 text-xs">
-                                <a 
-                                    href={`http://localhost:5067/${anexo.caminhoArquivo}`} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
-                                    className="text-blue-600 hover:underline truncate"
+                                <button
+                                    type="button"
+                                    onClick={() => baixarAnexo(anexo).catch((e) => toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.')))}
+                                    className="text-blue-600 hover:underline truncate text-left bg-transparent border-none p-0"
                                     title={anexo.nomeArquivo}
                                 >
                                     {anexo.nomeArquivo}
-                                </a>
+                                </button>
                                 <span className="text-gray-400 mt-1">
-                                    {anexo.enviadoPorId == null 
-                                        ? 'Enviado no cadastro da oferta' 
-                                        : `Enviado por: ${anexo.enviadoPorId === ofertanteId ? 'Ofertante' : 'Comprador'}`}
+                                    {anexo.finalidade === 1
+                                        ? 'Anexo da oferta'
+                                        : `${anexo.enviadoPorId === user?.id ? 'Você enviou' : 'A outra pessoa enviou'}${rodadaAtual > 0 ? (anexo.rodada === rodadaAtual ? ' (envio novo)' : ' (antes do ajuste)') : ''}`}
                                 </span>
                             </li>
                         ))}

@@ -5,7 +5,7 @@ export const getChat = async (atividadeId) => {
     return response.data;
 };
 
-export const enviarMensagem = async (atividadeId, conteudo, remetenteId) => {
-    const response = await api.post(`/chats/${atividadeId}/mensagens`, { conteudo, remetenteId });
+export const enviarMensagem = async (atividadeId, conteudo) => {
+    const response = await api.post(`/chats/${atividadeId}/mensagens`, { conteudo });
     return response.data;
 };

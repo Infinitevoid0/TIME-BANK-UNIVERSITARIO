@@ -3,6 +3,7 @@ BancoTempo.Api/bin/
 BancoTempo.Api/obj/
 BancoTempo.Api/api.log
 BancoTempo.Api/wwwroot/uploads/
+BancoTempo.Api/dados/
 BancoTempo.Api/appsettings.json
 BancoTempo.Api/appsettings.Development.json
 
@@ -18,3 +19,6 @@ banco-tempo-front/.env
 *.userprefs
 *.suo
 .DS_Store
+
+# Segredos do ambiente de teste (contas da equipe e chave do JWT)
+.env.teste

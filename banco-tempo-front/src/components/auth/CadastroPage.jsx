@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { cadastrar } from '../../services/authService';
 import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { mensagemDeErro } from '../../services/mensagens';
 import { UserPlus } from 'lucide-react';
 
 const CadastroPage = () => {
@@ -12,6 +13,7 @@ const CadastroPage = () => {
     const [confirmarSenha, setConfirmarSenha] = useState('');
     const [cursoId, setCursoId] = useState('');
     const [cursos, setCursos] = useState([]);
+    const [aceiteAviso, setAceiteAviso] = useState(false);
     const [loading, setLoading] = useState(false);
     const toast = useToast();
     const navigate = useNavigate();
@@ -23,8 +25,14 @@ const CadastroPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!email.endsWith('@ufsc.br') && !email.endsWith('@grad.ufsc.br')) {
-            toast.error('O email deve ser um email institucional da UFSC (@ufsc.br ou @grad.ufsc.br).');
+        const emailLimpo = email.trim().toLowerCase();
+        if (!emailLimpo.endsWith('@ufsc.br') && !emailLimpo.endsWith('@grad.ufsc.br')) {
+            toast.error('Use seu e-mail institucional (@grad.ufsc.br ou @ufsc.br).');
+            return;
+        }
+
+        if (senha.length < 8) {
+            toast.error('Crie uma senha com pelo menos 8 caracteres.');
             return;
         }
 
@@ -34,24 +42,28 @@ const CadastroPage = () => {
         }
 
         if (!cursoId) {
-            toast.error('Selecione um curso.');
+            toast.error('Escolha seu curso.');
+            return;
+        }
+
+        if (!aceiteAviso) {
+            toast.error('Para criar a conta, leia o aviso do teste e marque "Li e concordo".');
             return;
         }
 
         setLoading(true);
         try {
             await cadastrar({
-                nome,
-                email,
+                nome: nome.trim(),
+                email: emailLimpo,
                 senhaLimpa: senha,
                 cursoId: parseInt(cursoId, 10),
-                tipo: 1 // Aluno
+                aceiteAviso
             });
-            toast.success('Conta criada com sucesso! Faça login para continuar.');
+            toast.success('Conta criada. Entre com seu e-mail e senha.');
             navigate('/login');
         } catch (err) {
-            const msg = err.response?.data || 'Erro ao criar conta.';
-            toast.error(typeof msg === 'string' ? msg : 'Erro ao criar conta.');
+            toast.error(mensagemDeErro(err, 'Não foi possível criar a conta agora. Tente de novo.'));
         } finally {
             setLoading(false);
         }
@@ -118,7 +130,7 @@ const CadastroPage = () => {
                                 value={senha}
                                 onChange={(e) => setSenha(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-                                placeholder="••••••••"
+                                autoComplete="new-password" minLength={8}
                             />
                         </div>
                         <div>
@@ -129,10 +141,30 @@ const CadastroPage = () => {
                                 value={confirmarSenha}
                                 onChange={(e) => setConfirmarSenha(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-                                placeholder="••••••••"
+                                autoComplete="new-password" minLength={8}
                             />
                         </div>
                     </div>
+
+                    <section aria-labelledby="aviso-teste" className="rounded-lg border border-gray-300 bg-gray-50 p-4 text-sm text-gray-800 space-y-2">
+                        <h3 id="aviso-teste" className="font-semibold text-gray-900">Aviso do teste</h3>
+                        <p>
+                            Este cadastro faz parte de um teste acadêmico dos TCCs do curso de TIC da UFSC Araranguá. Use seu e-mail institucional.
+                            Não coloque dados pessoais (telefone, endereço, documentos) nas descrições, no chat nem nos comprovantes.
+                            O sistema registra as ações, como "pedido feito" ou "troca concluída", sem nome nem e-mail, para análise nos TCCs.
+                            Os dados deste teste serão apagados até 31/12/2026.
+                        </p>
+                        <label className="flex items-start gap-2 cursor-pointer min-h-11 py-2">
+                            <input
+                                type="checkbox"
+                                required
+                                checked={aceiteAviso}
+                                onChange={(e) => setAceiteAviso(e.target.checked)}
+                                className="mt-1 h-5 w-5 cursor-pointer"
+                            />
+                            <span>Li e concordo</span>
+                        </label>
+                    </section>
 
                     <button
                         type="submit"

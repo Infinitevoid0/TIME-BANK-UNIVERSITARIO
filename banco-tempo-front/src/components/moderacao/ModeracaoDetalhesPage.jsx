@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao, moderacaoFinal } from '../../services/atividadeService';
+import { getAtividade, getAnexos, moderarAtividade, reprovarAtividade, solicitarCorrecao, moderacaoFinal, cancelarTroca, baixarAnexo } from '../../services/atividadeService';
+import { mensagemDeErro } from '../../services/mensagens';
+import DescricaoSegura from '../ui/DescricaoSegura';
 import { useToast } from '../../hooks/useToast';
 import { ArrowLeft, Clock, User, Paperclip, Download, Calendar, Check, XCircle, Edit2 } from 'lucide-react';
 import Modal from '../ui/Modal';
@@ -25,8 +27,8 @@ const ModeracaoDetalhesPage = () => {
                     const anexosData = await getAnexos(id);
                     setAnexos(anexosData);
                 } catch { /* Sem anexos */ }
-            } catch {
-                toast.error('Atividade não encontrada.');
+            } catch (error) {
+                toast.error(mensagemDeErro(error, 'Não encontramos esta atividade.'));
             } finally {
                 setLoading(false);
             }
@@ -41,9 +43,7 @@ const ModeracaoDetalhesPage = () => {
             toast.success('Atividade aprovada com sucesso!');
             navigate('/moderacao');
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao aprovar atividade.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Erro ao aprovar atividade.'));
         } finally {
             setActionLoading(false);
         }
@@ -56,9 +56,7 @@ const ModeracaoDetalhesPage = () => {
             toast.success('Atividade reprovada.');
             navigate('/moderacao');
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao reprovar atividade.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Erro ao reprovar atividade.'));
         } finally {
             setActionLoading(false);
         }
@@ -76,9 +74,7 @@ const ModeracaoDetalhesPage = () => {
             toast.success("Correção solicitada com sucesso. O aluno foi notificado.");
             navigate('/moderacao');
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao solicitar correção.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Erro ao solicitar correção.'));
         } finally {
             setActionLoading(false);
             setShowCorrecaoModal(false);
@@ -97,12 +93,26 @@ const ModeracaoDetalhesPage = () => {
             toast.success(acao === 'Validar' ? 'Transação validada com sucesso!' : (acao === 'Invalidar' ? 'Transação invalidada.' : 'Revisão solicitada aos usuários.'));
             navigate('/moderacao');
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || 'Erro ao processar moderação final.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Erro ao processar moderação final.'));
         } finally {
             setActionLoading(false);
             if (acao === 'NecessitaRevisao') setShowCorrecaoModal(false);
+        }
+    };
+
+    const handleCancelarTroca = async () => {
+        if (!window.confirm('Cancelar esta troca? As horas reservadas voltam para quem pediu e a troca não pode ser retomada.')) {
+            return;
+        }
+        setActionLoading(true);
+        try {
+            await cancelarTroca(atividade.id, null);
+            toast.success('Troca cancelada. As horas voltaram para quem pediu.');
+            navigate('/moderacao');
+        } catch (error) {
+            toast.error(mensagemDeErro(error, 'Não foi possível cancelar a troca agora.'));
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -171,9 +181,9 @@ const ModeracaoDetalhesPage = () => {
 
                 <div className="p-6 border-b border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Descrição</h3>
-                    <div 
-                        className="prose prose-sm max-w-none text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
-                        dangerouslySetInnerHTML={{ __html: atividade.descricao }} 
+                    <DescricaoSegura
+                        html={atividade.descricao}
+                        className="text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
                     />
                 </div>
 
@@ -187,15 +197,18 @@ const ModeracaoDetalhesPage = () => {
                             {anexos.map(anexo => (
                                 <li key={anexo.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
                                     <span className="text-sm text-gray-700 truncate">{anexo.nomeArquivo}</span>
-                                    <a 
-                                        href={`http://localhost:5067/${anexo.caminhoArquivo}`} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                                    <span className="text-xs text-gray-500 mx-2 whitespace-nowrap">
+                                        {anexo.finalidade === 1 ? 'Anexo da oferta' : (anexo.enviadoPorId === atividade.ofertanteId ? 'De quem ofereceu' : 'De quem pediu')}
+                                        {anexo.finalidade === 2 && atividade.revisoesComprovantes > 0 ? ` (rodada ${anexo.rodada + 1})` : ''}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => baixarAnexo(anexo).catch((e) => toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.')))}
+                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none"
                                     >
-                                        <Download className="w-4 h-4 mr-1" />
+                                        <Download className="w-4 h-4 mr-1" aria-hidden="true" />
                                         Baixar
-                                    </a>
+                                    </button>
                                 </li>
                             ))}
                         </ul>
@@ -236,7 +249,18 @@ const ModeracaoDetalhesPage = () => {
                     )}
 
                     {/* Botões de Moderação Final */}
-                    {(atividade.status === 7 || atividade.status === 8) && (
+                    {(atividade.status === 6 || atividade.status === 8) && (
+                        <button
+                            onClick={handleCancelarTroca}
+                            disabled={actionLoading}
+                            className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-100 disabled:opacity-70 transition-colors"
+                        >
+                            <XCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                            Cancelar troca e devolver horas
+                        </button>
+                    )}
+
+                    {atividade.status === 7 && (
                         <>
                             <button
                                 onClick={() => handleModeracaoFinal('Invalidar')}
@@ -246,7 +270,7 @@ const ModeracaoDetalhesPage = () => {
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Invalidar Transação
                             </button>
-                            {atividade.status === 7 && (
+                            {atividade.revisoesComprovantes === 0 && (
                                 <button
                                     onClick={() => setShowCorrecaoModal(true)}
                                     disabled={actionLoading}

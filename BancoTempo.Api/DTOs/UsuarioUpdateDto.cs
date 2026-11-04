@@ -1,9 +1,20 @@
 namespace BancoTempo.Api.DTOs;
 
-// Edição de Perfil Próprio — sem campo de senha/tipo
+// Edição do próprio perfil: sem senha, tipo ou horas.
 public class UsuarioUpdateDto
 {
-    public required string Nome { get; set; }
-    public required string Email { get; set; }
+    public string? Nome { get; set; }
+    public string? Email { get; set; }
     public int? CursoId { get; set; }
+}
+
+public class CursoEntradaDto
+{
+    public string? Nome { get; set; }
+}
+
+public class DisciplinaEntradaDto
+{
+    public string? Nome { get; set; }
+    public int CursoId { get; set; }
 }

@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { updatePerfil } from '../../services/usuarioService';
+import { mensagemDeErro } from '../../services/mensagens';
 import api from '../../services/api';
 import { UserCog, Save } from 'lucide-react';
 
 const PerfilPage = () => {
-    const { user, updateUser } = useAuth();
+    const { user, recarregarUsuario } = useAuth();
     const toast = useToast();
     const [cursos, setCursos] = useState([]);
     const [formData, setFormData] = useState({
@@ -23,7 +24,7 @@ const PerfilPage = () => {
     useEffect(() => {
         if (user) {
             setFormData({
-                nome: user.nome || '',
+                nome: user.nomeCompleto || '',
                 email: user.email || '',
                 cursoId: user.cursoId || ''
             });
@@ -40,24 +41,15 @@ const PerfilPage = () => {
 
         setLoading(true);
         try {
-            await updatePerfil(user.id, {
+            await updatePerfil({
                 nome: formData.nome,
-                email: formData.email,
+                email: formData.email.trim().toLowerCase(),
                 cursoId: formData.cursoId ? parseInt(formData.cursoId, 10) : null
             });
-
-            const updatedCurso = cursos.find(c => c.id === parseInt(formData.cursoId, 10)) || null;
-            updateUser({ 
-                nome: formData.nome, 
-                email: formData.email, 
-                cursoId: formData.cursoId ? parseInt(formData.cursoId, 10) : null,
-                curso: updatedCurso
-            });
-            toast.success('Perfil atualizado com sucesso!');
+            await recarregarUsuario();
+            toast.success('Perfil atualizado.');
         } catch (error) {
-            const errData = error.response?.data;
-            const msg = typeof errData === 'string' ? errData : (errData?.mensagem || errData?.title || 'Erro ao atualizar perfil.');
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Não foi possível salvar o perfil agora.'));
         } finally {
             setLoading(false);
         }
@@ -92,14 +84,14 @@ const PerfilPage = () => {
                                 <span className="text-xl font-bold">{user?.nome?.charAt(0).toUpperCase()}</span>
                             </div>
                             <div>
-                                <p className="text-lg font-semibold text-gray-900">{user?.nome}</p>
+                                <p className="text-lg font-semibold text-gray-900">{user?.nomeCompleto}</p>
                                 <p className="text-sm text-gray-500">{user?.email}</p>
                             </div>
                         </div>
                         <div className="text-right">
                             {getTipoBadge(user?.tipo)}
                             <div className="mt-2 text-sm text-gray-500">
-                                Saldo: <span className="font-semibold text-blue-600">{user?.saldoHoras}</span> horas
+                                Suas horas: <span className="font-semibold">{user?.horas} h</span>
                             </div>
                         </div>
                     </div>
@@ -147,7 +139,7 @@ const PerfilPage = () => {
 
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                         <p className="text-xs text-gray-500">
-                            O tipo de usuário e o saldo de horas só podem ser alterados por um Administrador do sistema.
+                            O tipo de conta e as horas só podem ser alterados pela administração.
                         </p>
                     </div>
 

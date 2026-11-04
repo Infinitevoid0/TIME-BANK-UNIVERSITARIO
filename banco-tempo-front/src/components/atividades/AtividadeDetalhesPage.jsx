@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAtividade, getAnexos, comprarAtividade } from '../../services/atividadeService';
+import { getAtividade, getAnexos, comprarAtividade, baixarAnexo } from '../../services/atividadeService';
+import { mensagemDeErro } from '../../services/mensagens';
+import DescricaoSegura from '../ui/DescricaoSegura';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
 import { ArrowLeft, Clock, BookOpen, User, Paperclip, Download, Calendar, ShoppingCart } from 'lucide-react';
@@ -29,7 +31,7 @@ const AtividadeDetalhesPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingCompra, setLoadingCompra] = useState(false);
     const toast = useToast();
-    const { user, updateUser } = useAuth();
+    const { user, recarregarUsuario } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -40,8 +42,8 @@ const AtividadeDetalhesPage = () => {
                     const anexosData = await getAnexos(id);
                     setAnexos(anexosData);
                 } catch { /* Sem anexos */ }
-            } catch {
-                toast.error('Atividade não encontrada.');
+            } catch (error) {
+                toast.error(mensagemDeErro(error, 'Não encontramos esta atividade.'));
             } finally {
                 setLoading(false);
             }
@@ -50,20 +52,20 @@ const AtividadeDetalhesPage = () => {
     }, [id]);
 
     const handleComprar = async () => {
-        if (user.saldoHoras < atividade.custoHoras) {
-            toast.error('Você não possui saldo de horas suficiente para comprar esta atividade.');
+        if (user.horas < atividade.custoHoras) {
+            toast.error(`Você está com ${user.horas} h agora e esta ajuda leva ${atividade.custoHoras} h. Quando alguém receber uma ajuda sua, as horas entram e você pode pedir.`);
             return;
         }
 
         setLoadingCompra(true);
         try {
-            await comprarAtividade(atividade.id, user.id);
-            toast.success('Atividade comprada com sucesso!');
-            updateUser({ saldoHoras: user.saldoHoras - atividade.custoHoras });
+            await comprarAtividade(atividade.id);
+            toast.success('Pedido feito. Suas horas ficam reservadas até a troca ser concluída.');
+            await recarregarUsuario();
             navigate(`/chat/${atividade.id}`);
         } catch (error) {
-            const msg = error.response?.data?.mensagem || 'Erro ao efetuar a compra da atividade.';
-            toast.error(msg);
+            toast.error(mensagemDeErro(error, 'Não foi possível fazer o pedido agora. Tente de novo.'));
+            await recarregarUsuario();
             setLoadingCompra(false);
         }
     };
@@ -133,9 +135,9 @@ const AtividadeDetalhesPage = () => {
 
                 <div className="p-6 border-b border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Descrição</h3>
-                    <div 
-                        className="prose prose-sm max-w-none text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
-                        dangerouslySetInnerHTML={{ __html: atividade.descricao }} 
+                    <DescricaoSegura
+                        html={atividade.descricao}
+                        className="text-gray-700 overflow-y-auto overflow-x-hidden max-h-96 break-words"
                     />
                 </div>
 
@@ -149,15 +151,14 @@ const AtividadeDetalhesPage = () => {
                             {anexos.map(anexo => (
                                 <li key={anexo.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
                                     <span className="text-sm text-gray-700 truncate">{anexo.nomeArquivo}</span>
-                                    <a 
-                                        href={`http://localhost:5067/${anexo.caminhoArquivo}`} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                                    <button
+                                        type="button"
+                                        onClick={() => baixarAnexo(anexo).catch((e) => toast.error(mensagemDeErro(e, 'Não foi possível baixar o arquivo.')))}
+                                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none"
                                     >
-                                        <Download className="w-4 h-4 mr-1" />
+                                        <Download className="w-4 h-4 mr-1" aria-hidden="true" />
                                         Baixar
-                                    </a>
+                                    </button>
                                 </li>
                             ))}
                         </ul>

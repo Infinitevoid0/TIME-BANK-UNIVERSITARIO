@@ -1,7 +1,7 @@
 namespace BancoTempo.Api.DTOs;
 
+// Quem envia vem do token.
 public class EnviarMensagemDto
 {
-    public required string Conteudo { get; set; }
-    public int RemetenteId { get; set; }
+    public string? Conteudo { get; set; }
 }

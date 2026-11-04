@@ -4,7 +4,7 @@ public class AnexoAtividade
 {
     public int Id { get; set; }
     public required string NomeArquivo { get; set; } // Nome original do arquivo enviado
-    public required string CaminhoArquivo { get; set; } // Caminho no disco ou URL de armazenamento
+    public required string CaminhoArquivo { get; set; } // Nome do arquivo no disco (GUID + extensão), relativo à pasta de anexos
     public required string TipoMime { get; set; } // Ex: "application/pdf", "image/png"
     public long TamanhoBytes { get; set; }
 
@@ -17,4 +17,10 @@ public class AnexoAtividade
     public Atividade? Atividade { get; set; }
 
     public DateTime DataUpload { get; set; } = DateTime.UtcNow;
+
+    // Anexo da oferta (enviado por quem oferece durante a moderação) ou comprovante da troca.
+    public FinalidadeAnexo Finalidade { get; set; } = FinalidadeAnexo.Comprovante;
+
+    // Rodada de comprovantes em que o arquivo foi enviado (ver Atividade.RevisoesComprovantes).
+    public int Rodada { get; set; }
 }

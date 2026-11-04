@@ -42,3 +42,13 @@ button[disabled] {
   max-width: 100%;
   border-radius: 0.5rem;
 }
+
+/* Descrição vinda do editor: o Quill 2 grava listas como <ol><li data-list="bullet|ordered">. */
+.descricao-rica p { margin: 0 0 0.5rem; }
+.descricao-rica ol,
+.descricao-rica ul { padding-left: 1.5rem; margin: 0 0 0.5rem; }
+.descricao-rica li { list-style-type: disc; }
+.descricao-rica ol > li[data-list="ordered"],
+.descricao-rica ol > li:not([data-list]) { list-style-type: decimal; }
+.descricao-rica ol > li[data-list="bullet"] { list-style-type: disc; }
+.descricao-rica a { color: #00478F; text-decoration: underline; }

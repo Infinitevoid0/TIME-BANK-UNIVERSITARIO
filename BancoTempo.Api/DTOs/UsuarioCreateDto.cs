@@ -1,12 +1,11 @@
 namespace BancoTempo.Api.DTOs;
 
-using BancoTempo.Api.Models;
-
+// Cadastro público. Não tem Tipo: toda conta nova é Aluno.
 public class UsuarioCreateDto
 {
-    public required string Nome { get; set; }
-    public required string Email { get; set; }
-    public required string SenhaLimpa { get; set; }
+    public string? Nome { get; set; }
+    public string? Email { get; set; }
+    public string? SenhaLimpa { get; set; }
     public int? CursoId { get; set; }
-    public TipoUsuario Tipo { get; set; }
+    public bool AceiteAviso { get; set; }
 }

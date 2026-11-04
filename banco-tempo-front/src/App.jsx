@@ -13,8 +13,17 @@ import ChatPage from './components/chat/ChatPage';
 import { useAuth } from './hooks/useAuth';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
-  const { user } = useAuth();
-  
+  const { user, carregando } = useAuth();
+
+  if (carregando) {
+    return (
+      <div className="flex justify-center mt-20" role="status">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        <span className="sr-only">Carregando sua conta</span>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }

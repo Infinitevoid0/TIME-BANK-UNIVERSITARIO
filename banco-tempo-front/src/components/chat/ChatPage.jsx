@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { ArrowLeft, Send, MessageSquare } from 'lucide-react';
 import UploadComprovantes from './UploadComprovantes';
+import { mensagemDeErro } from '../../services/mensagens';
 
 const getStatusMessage = (status) => {
     switch (status) {
@@ -40,9 +41,7 @@ const ChatPage = () => {
             setChat(chatData);
             setAtividade(atividadeData);
         } catch (error) {
-            console.error("Erro no fetchData do ChatPage:", error);
-            const errorMsg = error.response?.data?.message || error.message || "Erro desconhecido";
-            toast.error(`Erro ao carregar o chat: ${errorMsg}`);
+            toast.error(mensagemDeErro(error, 'Não foi possível abrir este chat agora.'));
             navigate('/minhas-atividades');
         } finally {
             setLoading(false);
@@ -68,14 +67,14 @@ const ChatPage = () => {
 
         setEnviando(true);
         try {
-            const novaMensagem = await enviarMensagem(atividadeId, novoConteudo, user.id);
+            const novaMensagem = await enviarMensagem(atividadeId, novoConteudo);
             setChat(prev => ({
                 ...prev,
                 mensagens: [...(prev.mensagens || []), novaMensagem]
             }));
             setNovoConteudo('');
-        } catch {
-            toast.error("Erro ao enviar a mensagem.");
+        } catch (error) {
+            toast.error(mensagemDeErro(error, 'A mensagem não foi enviada. Tente de novo.'));
         } finally {
             setEnviando(false);
         }
@@ -103,7 +102,7 @@ const ChatPage = () => {
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">{atividade.titulo}</h2>
                             <p className="text-sm text-gray-500 mt-1 flex items-center">
-                                Sala de Negociação — Custo: {atividade.custoHoras}h
+                                Chat da troca. Tempo: {atividade.custoHoras} h
                             </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusObj.bg} ${statusObj.textColor}`}>
@@ -165,6 +164,8 @@ const ChatPage = () => {
                         statusAtual={atividade.status} 
                         ofertanteId={atividade.ofertanteId}
                         compradorId={atividade.compradorId}
+                        rodadaAtual={atividade.revisoesComprovantes}
+                        feedbackConferencia={atividade.feedbackConferencia}
                         onUploadSuccess={fetchData}
                     />
                 </div>

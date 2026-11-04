@@ -95,7 +95,7 @@ const AtividadesPage = () => {
         if (filterCurso && (!a.disciplina || a.disciplina.cursoId !== parseInt(filterCurso, 10))) return false;
         if (filterDisciplina && a.disciplinaId !== parseInt(filterDisciplina, 10)) return false;
         if (filterCreditos && a.custoHoras > parseInt(filterCreditos, 10)) return false;
-        if (apenasAcessiveis && a.custoHoras > (user?.saldoHoras || 0)) return false;
+        if (apenasAcessiveis && a.custoHoras > (user?.horas || 0)) return false;
         return true;
     });
 
@@ -182,7 +182,7 @@ const AtividadesPage = () => {
                                 ? <ToggleRight className="w-5 h-5 text-blue-600" />
                                 : <ToggleLeft className="w-5 h-5 text-gray-400" />
                             }
-                            Apenas acessíveis (≤ {user?.saldoHoras || 0}h)
+                            Cabe nas minhas horas (até {user?.horas || 0} h)
                         </button>
                     </div>
                 </div>
