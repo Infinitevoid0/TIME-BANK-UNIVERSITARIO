@@ -1,0 +1,72 @@
+# Ambiente do teste com a turma. Use pelo script: scripts/reset-teste.sh
+# Postgres e API ficam só na rede interna (sem portas no host e sem saída para a internet).
+# Só o front é publicado, e em 127.0.0.1: a turma entra pelo túnel HTTPS (serviço "tunel").
+name: bancotempo-teste
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: timebank
+      POSTGRES_USER: bancotempo
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA:?defina POSTGRES_SENHA no .env.teste}
+    volumes:
+      - dados_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bancotempo -d timebank"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [interna]
+
+  backend:
+    build:
+      context: ./BancoTempo.Api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Teste
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=timebank;Username=bancotempo;Password=${POSTGRES_SENHA}
+      Jwt__Chave: ${JWT_CHAVE:?defina JWT_CHAVE no .env.teste}
+      Equipe__Moderador__Email: ${MODERADOR_EMAIL:?defina MODERADOR_EMAIL no .env.teste}
+      Equipe__Moderador__Senha: ${MODERADOR_SENHA:?defina MODERADOR_SENHA no .env.teste}
+      Equipe__Moderador__Nome: ${MODERADOR_NOME:-Equipe Moderação}
+      Equipe__Administrador__Email: ${ADMIN_EMAIL:?defina ADMIN_EMAIL no .env.teste}
+      Equipe__Administrador__Senha: ${ADMIN_SENHA:?defina ADMIN_SENHA no .env.teste}
+      Equipe__Administrador__Nome: ${ADMIN_NOME:-Equipe Administração}
+    volumes:
+      - anexos:/app/dados/anexos
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [interna]
+
+  frontend:
+    build:
+      context: ./banco-tempo-front
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    ports:
+      - "${FRONT_ENDERECO:-127.0.0.1}:${FRONT_PORTA:-8090}:80"
+    depends_on:
+      - backend
+    networks: [interna, saida]
+
+  tunel:
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:80
+    depends_on:
+      - frontend
+    profiles: ["tunel"]
+    networks: [saida]
+
+networks:
+  interna:
+    internal: true
+  saida: {}
+
+volumes:
+  dados_postgres:
+  anexos:

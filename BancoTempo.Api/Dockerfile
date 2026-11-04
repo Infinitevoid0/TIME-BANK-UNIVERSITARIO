@@ -1,7 +1,9 @@
-# Multi-stage Dockerfile for .NET 8 Web API
+# API .NET 8 em duas etapas. Roda como o usuário sem privilégios "app".
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
 WORKDIR /app
+# A pasta de anexos nasce com dono "app"; o volume nomeado herda esse dono na primeira subida.
+RUN mkdir -p /app/dados/anexos && chown -R app:app /app/dados
+USER app
 EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
@@ -10,14 +12,9 @@ WORKDIR /src
 COPY ["BancoTempo.Api.csproj", "."]
 RUN dotnet restore "./BancoTempo.Api.csproj"
 COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./BancoTempo.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./BancoTempo.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "BancoTempo.Api.dll"]
