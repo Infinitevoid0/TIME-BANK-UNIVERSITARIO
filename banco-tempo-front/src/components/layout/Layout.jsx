@@ -1,5 +1,5 @@
 import { Outlet, Navigate, NavLink, Link } from 'react-router-dom';
-import { Compass, HandHeart, MessageCircleQuestionMark, Clock } from 'lucide-react';
+import { Compass, HandHeart, MessageCircleQuestionMark, Clock, MessagesSquare } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import ChipHoras from '../ui/ChipHoras';
 import MenuConta from './MenuConta';
@@ -63,6 +63,13 @@ const Layout = () => {
                     </nav>
 
                     <div className="ml-auto flex items-center gap-1 sm:gap-3">
+                        <Link
+                            to="/conversas"
+                            aria-label="Conversas"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-campo text-texto hover:bg-fundo"
+                        >
+                            <MessagesSquare className="w-5 h-5" aria-hidden="true" />
+                        </Link>
                         <Avisos />
                         <p className="flex items-center gap-2">
                             <span className="sr-only lg:not-sr-only text-texto-suave">Suas horas</span>

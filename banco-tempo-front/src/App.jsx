@@ -11,7 +11,7 @@ import ModeracaoPage from './components/moderacao/ModeracaoPage';
 import ModeracaoDetalhesPage from './components/moderacao/ModeracaoDetalhesPage';
 import UsuariosPage from './components/usuarios/UsuariosPage';
 import PerfilPage from './components/perfil/PerfilPage';
-import ChatPage from './components/chat/ChatPage';
+import ConversasPage from './pages/ConversasPage';
 import { useAuth } from './hooks/useAuth';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -58,7 +58,7 @@ function App() {
         <Route path="/pedir-ajuda" element={protegida(<PedirAjudaPage />)} />
         <Route path="/minhas-horas" element={protegida(<MinhasHorasPage />)} />
         <Route path="/trocas/:id" element={protegida(<AtividadeDetalhesPage />)} />
-        <Route path="/chat/:atividadeId" element={protegida(<ChatPage />)} />
+        <Route path="/conversas" element={protegida(<ConversasPage />)} />
         <Route path="/perfil" element={protegida(<PerfilPage />)} />
         <Route path="/moderacao" element={protegida(<ModeracaoPage />, 2)} />
         <Route path="/moderacao/:id" element={protegida(<ModeracaoDetalhesPage />, 2)} />
@@ -67,6 +67,7 @@ function App() {
 
       <Route path="/atividades" element={<Navigate to="/explorar" replace />} />
       <Route path="/atividades/:id" element={<RedirecionaTroca />} />
+      <Route path="/chat/:atividadeId" element={<RedirecionaTroca />} />
       <Route path="/minhas-atividades" element={<Navigate to="/minhas-horas" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

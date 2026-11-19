@@ -173,7 +173,7 @@ const MinhasHorasPage = () => {
                                 mostrar="ofertante"
                                 acao={
                                     a.status >= 6 && a.status <= 10 ? (
-                                        <Link to={`/chat/${a.id}`} className="botao-secundario">
+                                        <Link to={`/trocas/${a.id}`} className="botao-secundario">
                                             <MessageSquare className="w-4 h-4" aria-hidden="true" />
                                             Conversa e comprovantes
                                         </Link>
@@ -223,7 +223,7 @@ const MinhasHorasPage = () => {
                                 );
                             } else if (a.status >= 6 && a.status <= 10) {
                                 acao = (
-                                    <Link to={`/chat/${a.id}`} className="botao-secundario">
+                                    <Link to={`/trocas/${a.id}`} className="botao-secundario">
                                         <MessageSquare className="w-4 h-4" aria-hidden="true" />
                                         Conversa e comprovantes
                                     </Link>

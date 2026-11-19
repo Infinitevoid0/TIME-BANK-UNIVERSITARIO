@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, LogOut, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { ChevronDown, LogOut, MessagesSquare, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 
@@ -75,6 +75,12 @@ const MenuConta = () => {
                             <Link to="/perfil" className={itemClasse} onClick={() => setAberto(false)}>
                                 <UserRound className="w-5 h-5 text-texto-suave" aria-hidden="true" />
                                 Perfil
+                            </Link>
+                        </li>
+                        <li>
+                            <Link to="/conversas" className={itemClasse} onClick={() => setAberto(false)}>
+                                <MessagesSquare className="w-5 h-5 text-texto-suave" aria-hidden="true" />
+                                Conversas
                             </Link>
                         </li>
                         {isModerador && (
