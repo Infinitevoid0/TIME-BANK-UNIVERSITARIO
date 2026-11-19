@@ -50,6 +50,12 @@ public record CursoDto(int Id, string Nome, List<ReferenciaDto> Disciplinas);
 
 public record DisciplinaDto(int Id, string Nome, int CursoId, ReferenciaDto? Curso);
 
+// Aviso para quem participa de uma atividade. Sem identificação de quem agiu.
+public record AvisoDto(int Id, string Tipo, int AtividadeId, string TituloAtividade, int? StatusAnterior, int? StatusNovo, DateTime OcorridoEm);
+
+// Conversa de uma troca para a lista de conversas. A outra pessoa aparece só pelo nome de exibição.
+public record ConversaDto(int AtividadeId, string TituloAtividade, int Status, PessoaDto OutraPessoa, string? UltimaMensagem, DateTime? UltimaMensagemEm);
+
 public record EventoHistoricoDto(DateTime OcorridoEm, string Tipo, int? StatusAnterior, int? StatusNovo);
 
 public static class Mapeamento

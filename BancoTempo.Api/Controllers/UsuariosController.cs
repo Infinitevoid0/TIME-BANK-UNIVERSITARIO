@@ -127,6 +127,33 @@ namespace BancoTempo.Api.Controllers
             return Ok(new HorasDto(horas, reservadas, oferecidas, recebidas));
         }
 
+        // Avisos para quem oferece ou pediu: mudanças aceitas nas suas atividades feitas por outra pessoa.
+        // Quem pediu só vê o que aconteceu depois do pedido (status anterior 6 ou mais, ou comprovante enviado).
+        [HttpGet("me/avisos")]
+        public async Task<ActionResult<IEnumerable<AvisoDto>>> GetMeusAvisos([FromQuery] long? depoisDe)
+        {
+            var eu = User.IdPessoa();
+            var consulta =
+                from e in _context.EventosSistema.AsNoTracking()
+                join a in _context.Atividades.AsNoTracking() on e.AtividadeId equals a.Id
+                where (a.OfertanteId == eu || a.CompradorId == eu)
+                      && e.AtorId != eu
+                      && TiposDeAviso.Contains(e.Tipo)
+                      && e.HttpStatus >= 200 && e.HttpStatus < 300
+                      && (e.Tipo != TiposEvento.OfertaModerada || a.OfertanteId == eu)
+                      && (a.OfertanteId == eu || e.Tipo == TiposEvento.ComprovanteEnviado || e.StatusAnterior >= (int)StatusAtividade.EmExecucao)
+                      && (depoisDe == null || e.Id > depoisDe)
+                orderby e.Id descending
+                select new AvisoDto((int)e.Id, e.Tipo, a.Id, a.Titulo, e.StatusAnterior, e.StatusNovo, e.OcorridoEm);
+            return Ok(await consulta.Take(30).ToListAsync());
+        }
+
+        private static readonly string[] TiposDeAviso =
+        {
+            TiposEvento.PedidoFeito, TiposEvento.OfertaModerada, TiposEvento.TransicaoAplicada,
+            TiposEvento.ComprovanteEnviado, TiposEvento.HorasRegistradas, TiposEvento.HorasDevolvidas,
+        };
+
         [HttpPut("me/perfil")]
         public async Task<IActionResult> UpdatePerfil(UsuarioUpdateDto dto)
         {
