@@ -47,7 +47,6 @@ const LoginPage = () => {
     return (
         <TelaDeEntrada dividida>
             <h1>Entrar</h1>
-            <p className="mt-2 text-texto-suave">Use o e-mail da UFSC e a senha que você criou no cadastro.</p>
 
             {sessaoEncerrada && (
                 <p role="status" className="mt-4 rounded-campo border border-borda bg-neutro p-3">
