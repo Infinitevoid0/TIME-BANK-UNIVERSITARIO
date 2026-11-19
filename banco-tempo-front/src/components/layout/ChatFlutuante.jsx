@@ -10,7 +10,7 @@ import ChipStatus from '../ui/ChipStatus';
 import Avatar from '../ui/Avatar';
 import PainelConversa from '../chat/PainelConversa';
 
-// Popup de conversas: painel ao lado da página, aberto pelo ícone do cabeçalho ou pelo "Abrir conversa" da troca.
+// Popup de conversas: painel ao lado da página, aberto pela aba do canto inferior direito ou pelo "Abrir conversa" da troca.
 // Não é modal (a página continua utilizável); fecha com o X, com Esc ou ao trocar de página.
 // Abaixo de 1280 px ocupa a área entre o cabeçalho e a barra inferior, sem cobrir a navegação.
 const PainelPopup = ({ atividadeId, setAtividadeId, fechar, idTitulo }) => {
@@ -174,22 +174,6 @@ export const ChatFlutuanteProvider = ({ children }) => {
                 </div>
             )}
         </ChatFlutuanteContext.Provider>
-    );
-};
-
-// Botão do cabeçalho que abre e fecha o popup.
-export const BotaoConversas = () => {
-    const { abrirConversa, fechar, aberto } = useChatFlutuante();
-    return (
-        <button
-            type="button"
-            onClick={() => (aberto ? fechar() : abrirConversa())}
-            aria-expanded={aberto}
-            aria-label="Conversas"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-campo text-texto hover:bg-fundo"
-        >
-            <MessagesSquare className="w-5 h-5" aria-hidden="true" />
-        </button>
     );
 };
 
