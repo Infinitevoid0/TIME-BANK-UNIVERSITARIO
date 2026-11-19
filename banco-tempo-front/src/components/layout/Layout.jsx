@@ -38,7 +38,7 @@ const Layout = () => {
 
             <header className="z-40 border-b border-borda bg-superficie md:sticky md:top-0">
                 <div className="mx-auto flex h-16 w-full max-w-[70rem] items-center gap-3 px-4 lg:gap-6 lg:px-6">
-                    <Link to="/explorar" className="font-titulo text-lg font-bold text-destaque no-underline whitespace-nowrap sm:text-xl">
+                    <Link to="/explorar" className="font-titulo text-base font-bold leading-tight text-destaque no-underline max-w-[5.5rem] sm:max-w-none sm:whitespace-nowrap sm:text-xl">
                         Banco de Tempo
                     </Link>
 

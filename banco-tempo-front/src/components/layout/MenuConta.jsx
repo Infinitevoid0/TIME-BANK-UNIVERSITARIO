@@ -59,7 +59,7 @@ const MenuConta = () => {
             >
                 <Avatar nome={user?.nomeCompleto || user?.nome} />
                 <span className="sr-only sm:not-sr-only font-bold">Conta</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-150 ${visivel ? 'rotate-180' : ''}`} aria-hidden="true" />
+                <ChevronDown className={`hidden sm:block w-4 h-4 transition-transform duration-150 ${visivel ? 'rotate-180' : ''}`} aria-hidden="true" />
             </button>
 
             {visivel && (

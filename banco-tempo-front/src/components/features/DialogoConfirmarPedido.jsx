@@ -77,7 +77,6 @@ const DialogoConfirmarPedido = ({ oferta, aoFechar, aoConcluir, aoConflito }) =>
 
                 <p>
                     Ao confirmar, <strong>{oferta.custoHoras} h</strong> das suas horas ficam <strong>reservadas</strong> até a troca ser concluída.
-                    Se a troca for cancelada, as horas voltam para você.
                 </p>
                 <ExplicacaoHoras antesDeAbrir={fechar} className="text-sm" />
 
