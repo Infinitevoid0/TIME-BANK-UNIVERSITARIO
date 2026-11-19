@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { CircleAlert } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Campo from '../ui/Campo';
+import CampoSenha from '../ui/CampoSenha';
 import TelaDeEntrada from './TelaDeEntrada';
 
 const ehInstitucional = (email) => email.endsWith('@ufsc.br') || email.endsWith('@grad.ufsc.br');
@@ -66,8 +67,7 @@ const LoginPage = () => {
                     />
                 </Campo>
                 <Campo id="login-senha" rotulo="Senha" erro={erros.senha}>
-                    <input
-                        type="password"
+                    <CampoSenha
                         autoComplete="current-password"
                         className="campo"
                         value={senha}

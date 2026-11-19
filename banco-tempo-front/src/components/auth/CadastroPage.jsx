@@ -6,6 +6,7 @@ import api from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { mensagemDeErro } from '../../services/mensagens';
 import Campo from '../ui/Campo';
+import CampoSenha from '../ui/CampoSenha';
 import TelaDeEntrada from './TelaDeEntrada';
 
 const ehInstitucional = (email) => email.endsWith('@ufsc.br') || email.endsWith('@grad.ufsc.br');
@@ -112,11 +113,11 @@ const CadastroPage = () => {
                 </Campo>
                 <div className="grid gap-5 sm:grid-cols-2">
                     <Campo id="cadastro-senha" rotulo="Senha" erro={erros.senha} ajuda="Pelo menos 8 caracteres.">
-                        <input type="password" name="senha" autoComplete="new-password" className="campo"
+                        <CampoSenha name="senha" autoComplete="new-password" className="campo"
                             value={dados.senha} onChange={alterar} onBlur={aoSair} />
                     </Campo>
                     <Campo id="cadastro-confirmar" rotulo="Repita a senha" erro={erros.confirmar}>
-                        <input type="password" name="confirmar" autoComplete="new-password" className="campo"
+                        <CampoSenha name="confirmar" autoComplete="new-password" className="campo"
                             value={dados.confirmar} onChange={alterar} onBlur={aoSair} />
                     </Campo>
                 </div>
