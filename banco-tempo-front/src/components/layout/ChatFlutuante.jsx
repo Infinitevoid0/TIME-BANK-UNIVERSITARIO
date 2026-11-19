@@ -4,34 +4,72 @@ import { ArrowLeft, ChevronUp, Maximize2, MessagesSquare, X } from 'lucide-react
 import { getConversas } from '../../services/chatService';
 import { mensagemDeErro } from '../../services/mensagens';
 import { formatarTempoRelativo } from '../../services/formatos';
+import { chaveConversasVistas, lerPreferencia, salvarPreferencia } from '../../services/sessao';
 import { ChatFlutuanteContext } from '../../contexts/chatFlutuanteContexto';
 import { useChatFlutuante } from '../../hooks/useChatFlutuante';
+import { useAuth } from '../../hooks/useAuth';
 import ChipStatus from '../ui/ChipStatus';
 import Avatar from '../ui/Avatar';
 import PainelConversa from '../chat/PainelConversa';
+
+const INTERVALO_MS = 30000;
+
+const momento = (valor) => {
+    const t = valor ? Date.parse(valor) : NaN;
+    return Number.isNaN(t) ? 0 : t;
+};
+
+const lerVistas = (chave) => {
+    try {
+        return JSON.parse(lerPreferencia(chave) || '{}') || {};
+    } catch {
+        return {};
+    }
+};
+
+// Bolinha de "mensagem nova" sobre um ícone. O texto para leitor de tela fica no controle que a usa.
+export const BolinhaNova = ({ className = '' }) => (
+    <span
+        aria-hidden="true"
+        className={`absolute h-3 w-3 rounded-full bg-destaque ring-2 ring-superficie ${className}`}
+    />
+);
+
+// Item da lista de conversas (popup e página), com destaque quando há mensagem nova.
+export const ItemConversa = ({ conversa: c, nova, ativa = false, aoAbrir }) => (
+    <button
+        type="button"
+        onClick={() => aoAbrir(c.atividadeId)}
+        aria-current={ativa ? 'true' : undefined}
+        className={`flex w-full gap-3 px-4 py-3 text-left hover:bg-fundo ${ativa ? 'bg-fundo' : ''}`}
+    >
+        <span className="relative shrink-0">
+            <Avatar nome={c.outraPessoa?.nome || 'Colega'} />
+            {nova && <BolinhaNova className="-right-0.5 -top-0.5" />}
+        </span>
+        <span className="min-w-0 flex-1 space-y-1">
+            <span className={`block break-words ${nova ? 'font-bold' : 'font-semibold'}`}>{c.tituloAtividade}</span>
+            <span className="block text-texto-suave">{c.outraPessoa?.nome}</span>
+            <span className="block"><ChipStatus status={c.status} /></span>
+            <span className={`block truncate text-sm ${nova ? 'font-bold text-texto' : 'text-texto-suave'}`}>
+                {nova && <span className="text-destaque">Nova mensagem: </span>}
+                {c.ultimaMensagem
+                    ? `${c.ultimaMensagemMinha ? 'Você: ' : ''}${c.ultimaMensagem}${c.ultimaMensagemEm ? `, ${formatarTempoRelativo(c.ultimaMensagemEm)}` : ''}`
+                    : 'Nenhuma mensagem ainda'}
+            </span>
+        </span>
+    </button>
+);
 
 // Popup de conversas: painel ao lado da página, aberto pela aba do canto inferior direito ou pelo "Abrir conversa" da troca.
 // Não é modal (a página continua utilizável); fecha com o X, com Esc ou ao trocar de página.
 // Abaixo de 1280 px ocupa a área entre o cabeçalho e a barra inferior, sem cobrir a navegação.
 const PainelPopup = ({ atividadeId, setAtividadeId, fechar, idTitulo }) => {
-    const [conversas, setConversas] = useState([]);
-    const [carregando, setCarregando] = useState(true);
-    const [erro, setErro] = useState('');
-
-    const carregar = useCallback(async () => {
-        setErro('');
-        try {
-            setConversas((await getConversas()) || []);
-        } catch (e) {
-            setErro(mensagemDeErro(e, 'Não foi possível carregar suas conversas agora.'));
-        } finally {
-            setCarregando(false);
-        }
-    }, []);
+    const { conversas, carregandoConversas, erroConversas, carregarConversas, ehNova } = useChatFlutuante();
 
     useEffect(() => {
-        carregar();
-    }, [carregar]);
+        carregarConversas();
+    }, [carregarConversas]);
 
     return (
         <>
@@ -70,15 +108,15 @@ const PainelPopup = ({ atividadeId, setAtividadeId, fechar, idTitulo }) => {
 
             <div className="min-h-0 flex-1 overflow-hidden">
                 {atividadeId ? (
-                    <PainelConversa key={atividadeId} atividadeId={atividadeId} aoEnviar={carregar} compacto />
+                    <PainelConversa key={atividadeId} atividadeId={atividadeId} aoEnviar={carregarConversas} compacto />
                 ) : (
                     <div className="h-full overflow-y-auto">
-                        {carregando ? (
+                        {carregandoConversas && conversas.length === 0 ? (
                             <p role="status" className="px-4 py-6 text-texto-suave">Carregando conversas...</p>
-                        ) : erro ? (
+                        ) : erroConversas && conversas.length === 0 ? (
                             <div role="alert" className="px-4 py-5">
-                                <p>{erro}</p>
-                                <button type="button" onClick={() => { setCarregando(true); carregar(); }} className="botao-secundario mt-3">
+                                <p>{erroConversas}</p>
+                                <button type="button" onClick={carregarConversas} className="botao-secundario mt-3">
                                     Tentar de novo
                                 </button>
                             </div>
@@ -90,23 +128,7 @@ const PainelPopup = ({ atividadeId, setAtividadeId, fechar, idTitulo }) => {
                             <ul className="divide-y divide-borda">
                                 {conversas.map((c) => (
                                     <li key={c.atividadeId}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setAtividadeId(c.atividadeId)}
-                                            className="flex w-full gap-3 px-4 py-3 text-left hover:bg-fundo"
-                                        >
-                                            <Avatar nome={c.outraPessoa?.nome || 'Colega'} />
-                                            <span className="min-w-0 flex-1 space-y-1">
-                                                <span className="block font-bold break-words">{c.tituloAtividade}</span>
-                                                <span className="block text-texto-suave">{c.outraPessoa?.nome}</span>
-                                                <span className="block"><ChipStatus status={c.status} /></span>
-                                                <span className="block truncate text-sm text-texto-suave">
-                                                    {c.ultimaMensagem
-                                                        ? `${c.ultimaMensagem}${c.ultimaMensagemEm ? `, ${formatarTempoRelativo(c.ultimaMensagemEm)}` : ''}`
-                                                        : 'Nenhuma mensagem ainda'}
-                                                </span>
-                                            </span>
-                                        </button>
+                                        <ItemConversa conversa={c} nova={ehNova(c)} aoAbrir={setAtividadeId} />
                                     </li>
                                 ))}
                             </ul>
@@ -118,10 +140,19 @@ const PainelPopup = ({ atividadeId, setAtividadeId, fechar, idTitulo }) => {
     );
 };
 
+// Guarda a lista de conversas e o "visto" de cada uma. O servidor não registra leitura: o momento da última
+// mensagem vista de cada conversa fica no navegador (bt_conversas_vistas_<id>). Mensagem nova = a última mensagem
+// é de outra pessoa e é mais recente que o visto. A lista é atualizada a cada 30 s com a aba visível.
 export const ChatFlutuanteProvider = ({ children }) => {
+    const { user } = useAuth();
+    const chaveVistas = chaveConversasVistas(user?.id);
     const [aberto, setAberto] = useState(false);
     const [atividadeId, setAtividadeId] = useState(null);
     const [caminhoAberto, setCaminhoAberto] = useState(null);
+    const [conversas, setConversas] = useState([]);
+    const [carregandoConversas, setCarregandoConversas] = useState(true);
+    const [erroConversas, setErroConversas] = useState('');
+    const [vistas, setVistas] = useState(() => lerVistas(chaveVistas));
     const location = useLocation();
     const painelRef = useRef(null);
     const origemFocoRef = useRef(null);
@@ -129,6 +160,49 @@ export const ChatFlutuanteProvider = ({ children }) => {
 
     // Trocar de página fecha o popup (no celular ele cobriria a página nova).
     const visivel = aberto && caminhoAberto === location.pathname;
+
+    const carregarConversas = useCallback(async () => {
+        try {
+            setConversas((await getConversas()) || []);
+            setErroConversas('');
+        } catch (e) {
+            setErroConversas(mensagemDeErro(e, 'Não foi possível carregar suas conversas agora.'));
+        } finally {
+            setCarregandoConversas(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        carregarConversas();
+        const intervalo = setInterval(() => {
+            if (document.visibilityState === 'visible') carregarConversas();
+        }, INTERVALO_MS);
+        const aoVoltarParaAba = () => {
+            if (document.visibilityState === 'visible') carregarConversas();
+        };
+        document.addEventListener('visibilitychange', aoVoltarParaAba);
+        return () => {
+            clearInterval(intervalo);
+            document.removeEventListener('visibilitychange', aoVoltarParaAba);
+        };
+    }, [carregarConversas]);
+
+    const marcarVista = useCallback((id, dataUltimaMensagem) => {
+        const t = momento(dataUltimaMensagem);
+        if (!id || !t) return;
+        setVistas((atuais) => {
+            if ((atuais[id] || 0) >= t) return atuais;
+            const novas = { ...atuais, [id]: t };
+            salvarPreferencia(chaveVistas, JSON.stringify(novas));
+            return novas;
+        });
+    }, [chaveVistas]);
+
+    const ehNova = useCallback(
+        (c) => Boolean(c.ultimaMensagemEm) && !c.ultimaMensagemMinha && momento(c.ultimaMensagemEm) > (vistas[c.atividadeId] || 0),
+        [vistas]
+    );
+    const totalNovas = conversas.filter(ehNova).length;
 
     const abrirConversa = useCallback((id = null) => {
         origemFocoRef.current = document.activeElement;
@@ -156,7 +230,11 @@ export const ChatFlutuanteProvider = ({ children }) => {
         };
     }, [visivel, fechar]);
 
-    const valor = useMemo(() => ({ abrirConversa, fechar, aberto: visivel }), [abrirConversa, fechar, visivel]);
+    const valor = useMemo(() => ({
+        abrirConversa, fechar, aberto: visivel,
+        conversas, carregandoConversas, erroConversas, carregarConversas,
+        ehNova, totalNovas, marcarVista,
+    }), [abrirConversa, fechar, visivel, conversas, carregandoConversas, erroConversas, carregarConversas, ehNova, totalNovas, marcarVista]);
 
     return (
         <ChatFlutuanteContext.Provider value={valor}>
@@ -180,7 +258,7 @@ export const ChatFlutuanteProvider = ({ children }) => {
 // Aba fixa no canto inferior direito (estilo LinkedIn) que abre o mesmo popup.
 // Só a partir de 1280 px, quando não há barra inferior de navegação; some enquanto o popup está aberto.
 export const AbaConversas = () => {
-    const { abrirConversa, aberto } = useChatFlutuante();
+    const { abrirConversa, aberto, totalNovas } = useChatFlutuante();
     // Escondida (não desmontada) enquanto o popup está aberto, para o foco voltar a ela ao fechar.
     return (
         <div className={`dock-conversas fixed bottom-0 right-6 z-30 hidden w-72 ${aberto ? '' : 'xl:block'}`}>
@@ -191,8 +269,18 @@ export const AbaConversas = () => {
                 aria-haspopup="dialog"
                 className="flex w-full min-h-12 items-center gap-3 rounded-t-painel border border-b-0 border-borda bg-superficie px-4 text-left font-bold text-texto shadow-elevada hover:bg-fundo"
             >
-                <MessagesSquare className="w-5 h-5 text-destaque" aria-hidden="true" />
-                <span className="flex-1">Conversas</span>
+                <span className="relative inline-flex">
+                    <MessagesSquare className="w-5 h-5 text-destaque" aria-hidden="true" />
+                    {totalNovas > 0 && <BolinhaNova className="-right-1 -top-1" />}
+                </span>
+                <span className="flex-1">
+                    Conversas
+                    {totalNovas > 0 && (
+                        <span className="sr-only">
+                            , {totalNovas === 1 ? '1 conversa com mensagem nova' : `${totalNovas} conversas com mensagens novas`}
+                        </span>
+                    )}
+                </span>
                 <ChevronUp className="w-5 h-5 text-texto-suave" aria-hidden="true" />
             </button>
         </div>

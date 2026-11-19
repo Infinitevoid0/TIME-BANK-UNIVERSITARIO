@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, CircleHelp, LogOut, MessagesSquare, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useComoFunciona } from '../../hooks/useComoFunciona';
 import { ControlesAcessibilidade } from './Acessibilidade';
+import { BolinhaNova } from './ChatFlutuante';
+import { useChatFlutuante } from '../../hooks/useChatFlutuante';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 
@@ -12,6 +14,8 @@ const PAPEL = { 1: 'Aluno', 2: 'Moderação', 3: 'Administração' };
 const MenuConta = () => {
     const { user, logout, isModerador } = useAuth();
     const { abrir: abrirComoFunciona } = useComoFunciona();
+    const { totalNovas } = useChatFlutuante();
+    const textoNovas = totalNovas === 1 ? '1 conversa com mensagem nova' : `${totalNovas} conversas com mensagens novas`;
     const [aberto, setAberto] = useState(false);
     const [caminhoAberto, setCaminhoAberto] = useState(null);
     const location = useLocation();
@@ -58,7 +62,11 @@ const MenuConta = () => {
                 aria-controls={idPainel}
                 className="inline-flex items-center gap-2 min-h-11 rounded-campo px-1 sm:px-2 hover:bg-fundo"
             >
-                <Avatar nome={user?.nomeCompleto || user?.nome} />
+                <span className="relative inline-flex">
+                    <Avatar nome={user?.nomeCompleto || user?.nome} />
+                    {totalNovas > 0 && <BolinhaNova className="-right-0.5 -top-0.5" />}
+                </span>
+                {totalNovas > 0 && <span className="sr-only">{textoNovas}, </span>}
                 <span className="sr-only sm:not-sr-only font-bold">Conta</span>
                 <ChevronDown className={`hidden sm:block w-4 h-4 transition-transform duration-150 ${visivel ? 'rotate-180' : ''}`} aria-hidden="true" />
             </button>
@@ -82,8 +90,12 @@ const MenuConta = () => {
                         </li>
                         <li>
                             <Link to="/conversas" className={itemClasse} onClick={() => setAberto(false)}>
-                                <MessagesSquare className="w-5 h-5 text-texto-suave" aria-hidden="true" />
+                                <span className="relative inline-flex">
+                                    <MessagesSquare className="w-5 h-5 text-texto-suave" aria-hidden="true" />
+                                    {totalNovas > 0 && <BolinhaNova className="-right-1 -top-1" />}
+                                </span>
                                 Conversas
+                                {totalNovas > 0 && <span className="sr-only">, {textoNovas}</span>}
                             </Link>
                         </li>
                         <li>

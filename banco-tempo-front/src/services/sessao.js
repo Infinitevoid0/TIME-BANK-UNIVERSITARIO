@@ -46,3 +46,4 @@ export const salvarPreferencia = (chave, valor) => {
 export const chaveAvisosVistos = (idUsuario) => `bt_avisos_visto_${idUsuario}`;
 export const chaveComoFuncionaVisto = (idUsuario) => `bt_como_funciona_visto_${idUsuario}`;
 export const chaveAvisosLimpos = (idUsuario) => `bt_avisos_limpo_${idUsuario}`;
+export const chaveConversasVistas = (idUsuario) => `bt_conversas_vistas_${idUsuario}`;

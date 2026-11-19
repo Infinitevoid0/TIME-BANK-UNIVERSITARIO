@@ -6,6 +6,7 @@ import { getAtividade } from '../../services/atividadeService';
 import { formatarHora } from '../../services/formatos';
 import { mensagemDeErro } from '../../services/mensagens';
 import { useAuth } from '../../hooks/useAuth';
+import { useChatFlutuante } from '../../hooks/useChatFlutuante';
 import { useToast } from '../../hooks/useToast';
 import ChipStatus from '../ui/ChipStatus';
 import { Carregando, ErroCarregar } from '../ui/Estados';
@@ -14,6 +15,7 @@ import { Carregando, ErroCarregar } from '../ui/Estados';
 // compacto: versão do popup, que ocupa a altura toda do painel e rola só as mensagens.
 const PainelConversa = ({ atividadeId, aoEnviar, compacto = false }) => {
     const { user } = useAuth();
+    const { marcarVista } = useChatFlutuante();
     const toast = useToast();
     const fimMensagensRef = useRef(null);
 
@@ -49,6 +51,13 @@ const PainelConversa = ({ atividadeId, aoEnviar, compacto = false }) => {
         }, 5000);
         return () => clearInterval(interval);
     }, [atividadeId, carregar]);
+
+    // Abrir a conversa marca como vista a última mensagem carregada (e as que chegarem enquanto ela estiver aberta).
+    const ultimaData = chat?.mensagens?.length ? chat.mensagens[chat.mensagens.length - 1].dataEnvio : null;
+    const participa = atividade && (user?.id === atividade.ofertanteId || user?.id === atividade.compradorId);
+    useEffect(() => {
+        if (participa && ultimaData) marcarVista(Number(atividadeId), ultimaData);
+    }, [participa, ultimaData, atividadeId, marcarVista]);
 
     useEffect(() => {
         fimMensagensRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
