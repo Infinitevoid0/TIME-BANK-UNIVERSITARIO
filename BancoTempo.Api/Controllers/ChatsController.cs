@@ -27,6 +27,38 @@ namespace BancoTempo.Api.Controllers
 
         private static bool EhTroca(StatusAtividade s) => s >= StatusAtividade.EmExecucao;
 
+        // Lista de conversas de quem oferece ou pediu, das trocas em andamento ou encerradas (status 6 em diante).
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ConversaDto>>> GetConversas()
+        {
+            var eu = User.IdPessoa();
+            var linhas = await _context.Atividades.AsNoTracking()
+                .Where(a => (a.OfertanteId == eu || a.CompradorId == eu) && a.CompradorId != null && a.Status >= StatusAtividade.EmExecucao)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Titulo,
+                    a.Status,
+                    a.DataCriacao,
+                    OutraId = a.OfertanteId == eu ? a.CompradorId!.Value : a.OfertanteId,
+                    OutraNome = a.OfertanteId == eu ? a.Comprador!.Nome : a.Ofertante!.Nome,
+                    Ultima = _context.Mensagens
+                        .Where(m => m.ChatPrivado!.AtividadeId == a.Id)
+                        .OrderByDescending(m => m.DataEnvio).ThenByDescending(m => m.Id)
+                        .Select(m => new { m.Conteudo, m.DataEnvio })
+                        .FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            return Ok(linhas
+                .OrderByDescending(l => l.Ultima?.DataEnvio ?? l.DataCriacao)
+                .Select(l => new ConversaDto(
+                    l.Id, l.Titulo, (int)l.Status,
+                    new PessoaDto(l.OutraId, Identidade.NomeExibicao(l.OutraNome)),
+                    l.Ultima is null ? null : (l.Ultima.Conteudo.Length > 80 ? l.Ultima.Conteudo[..80] : l.Ultima.Conteudo),
+                    l.Ultima?.DataEnvio)));
+        }
+
         [HttpGet("{atividadeId:int}")]
         public async Task<ActionResult<ChatDto>> GetChat(int atividadeId)
         {
