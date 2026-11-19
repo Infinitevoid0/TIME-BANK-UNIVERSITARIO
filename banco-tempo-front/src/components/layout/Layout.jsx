@@ -7,7 +7,7 @@ import MenuConta from './MenuConta';
 import Avisos from './Avisos';
 import Acessibilidade from './Acessibilidade';
 import { AbaConversas, ChatFlutuanteProvider } from './ChatFlutuante';
-import LogoPlaceholder from '../ui/LogoPlaceholder';
+import Logo from '../ui/Logo';
 import { ComoFuncionaProvider } from '../features/ComoFunciona';
 
 // Os quatro destinos principais: no topo a partir de 1280 px (com texto, não cabem antes), na barra inferior abaixo disso.
@@ -70,7 +70,7 @@ const Layout = () => {
             <header ref={cabecalhoRef} className="cabecalho z-40 border-b border-borda bg-superficie xl:sticky xl:top-0">
                 <div className="mx-auto flex min-h-16 w-full max-w-[90rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1 lg:gap-x-8 lg:px-8 xl:gap-x-6 xl:px-6">
                     <Link to="/explorar" aria-label="Banco de Tempo, ir para Explorar" className="inline-flex rounded-campo no-underline">
-                        <LogoPlaceholder />
+                        <Logo alt="" />
                     </Link>
 
                     <nav aria-label="Principal" className="nav-topo hidden self-stretch xl:flex">

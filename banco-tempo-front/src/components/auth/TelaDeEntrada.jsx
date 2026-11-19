@@ -1,4 +1,4 @@
-import LogoPlaceholder from '../ui/LogoPlaceholder';
+import Logo from '../ui/Logo';
 
 // Uma linha só no login: a explicação completa fica no guia "Como funciona?".
 const FRASE_CURTA = 'Ajuda entre colegas de TIC da UFSC Araranguá: uma hora vale uma hora.';
@@ -19,7 +19,7 @@ const TelaDeEntrada = ({ children, dividida = false }) => {
                     className="flex items-center border-b border-borda bg-superficie px-6 py-6 sm:px-10 lg:min-h-screen lg:border-b-0 lg:border-r lg:px-20"
                 >
                     <div className="flex items-center gap-4 lg:block lg:space-y-10">
-                        <LogoPlaceholder tamanho="grande" />
+                        <Logo tamanho="grande" alt="" />
                         <div className="space-y-1 lg:space-y-4">
                             <p id="titulo-apresentacao" className="font-titulo text-2xl font-bold leading-tight lg:text-5xl">
                                 Banco de Tempo

@@ -29,4 +29,3 @@ Lacunas que continuam:
 - **Imagens do "Como funciona?"** são provisórias (`src/assets/como-funciona/*-placeholder.svg`).
 
 - **Modo escuro:** os tokens existem no DESIGN.md, mas só o claro e o alto contraste claro foram implementados e verificados.
-- **Logotipo:** o cabeçalho e o login usam um espaço reservado (`banco-tempo-front/src/components/ui/LogoPlaceholder.jsx`). Troque o conteúdo do componente por um `<img>` com o logo, `width`, `height` e `alt="Banco de Tempo"`.
