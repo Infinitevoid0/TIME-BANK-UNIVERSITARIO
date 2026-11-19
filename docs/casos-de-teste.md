@@ -121,3 +121,19 @@ Roteiro no navegador com duas contas (A em 1280 px, B em 360 px): **12 de 12** c
 - Continua apagada depois de recarregar.
 - No celular de B, a bolinha aparece no avatar e no item "Conversas" do menu, com texto para leitor de tela.
 - Sem rolagem horizontal e sem erro de JavaScript.
+
+### Verificação da busca de ofertas (19/11/2026)
+
+Roteiro no navegador com 4 ofertas de teste: **22 de 22** checagens passaram.
+
+- Sem acento e em minúsculas acha "Cálculo".
+- Várias palavras e maiúsculas acham "Revisão de texto".
+- Busca pelo nome de quem oferece e pela disciplina.
+- Destaque das palavras no título.
+- Filtro de um e de dois tempos, com `aria-pressed`.
+- Ordenação por mais e por menos tempo.
+- Próprias ofertas fora por padrão no Pedir ajuda e incluídas pela opção; no Explorar sempre aparecem.
+- Busca mantida no endereço ao recarregar, ao abrir uma oferta e voltar, e com o voltar do navegador.
+- Limpar filtros e estado vazio.
+- Link com filtros aplicado em 360 px, sem rolagem horizontal.
+- Sem erro de JavaScript.

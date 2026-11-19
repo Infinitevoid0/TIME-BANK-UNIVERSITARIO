@@ -5,7 +5,8 @@ import ChipStatus from '../ui/ChipStatus';
 
 // Uma linha da lista: título que leva ao detalhe, quem, disciplina, tempo e status visíveis sem abrir nada.
 // O link do título cobre a linha inteira; ações próprias (botões) ficam por cima dele.
-const LinhaOferta = ({ atividade, euId, mostrar = 'ofertante', acao, children }) => {
+// titulo (opcional): conteúdo do título, por exemplo com as palavras da busca destacadas.
+const LinhaOferta = ({ atividade, euId, mostrar = 'ofertante', acao, children, titulo }) => {
     const souOfertante = atividade.ofertanteId === euId;
     const souQuemPediu = atividade.compradorId != null && atividade.compradorId === euId;
 
@@ -25,7 +26,7 @@ const LinhaOferta = ({ atividade, euId, mostrar = 'ofertante', acao, children })
                             to={`/trocas/${atividade.id}`}
                             className="text-texto no-underline hover:underline underline-offset-2 after:absolute after:inset-0 after:content-['']"
                         >
-                            {atividade.titulo}
+                            {titulo ?? atividade.titulo}
                         </Link>
                     </h3>
                     <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-texto-suave">
