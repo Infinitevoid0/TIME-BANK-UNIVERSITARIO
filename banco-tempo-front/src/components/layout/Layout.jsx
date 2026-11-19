@@ -3,6 +3,7 @@ import { Compass, HandHeart, MessageCircleQuestionMark, Clock } from 'lucide-rea
 import { useAuth } from '../../hooks/useAuth';
 import ChipHoras from '../ui/ChipHoras';
 import MenuConta from './MenuConta';
+import Avisos from './Avisos';
 
 // Os quatro destinos principais, iguais no topo (desktop) e na barra inferior (celular).
 const DESTINOS = [
@@ -61,7 +62,8 @@ const Layout = () => {
                         </ul>
                     </nav>
 
-                    <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                    <div className="ml-auto flex items-center gap-1 sm:gap-3">
+                        <Avisos />
                         <p className="flex items-center gap-2">
                             <span className="sr-only lg:not-sr-only text-texto-suave">Suas horas</span>
                             <ChipHoras horas={user.horas} />

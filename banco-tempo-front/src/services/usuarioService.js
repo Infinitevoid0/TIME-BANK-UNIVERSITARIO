@@ -45,3 +45,9 @@ export const exportarEventos = async () => {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
+
+// Avisos das minhas ofertas e trocas (só leitura; o servidor não guarda "lido").
+export const getAvisos = async (depoisDe) => {
+    const response = await api.get('/usuarios/me/avisos', { params: depoisDe ? { depoisDe } : undefined });
+    return response.data;
+};

@@ -25,3 +25,23 @@ export const limparSessao = () => {
         // nada a limpar
     }
 };
+
+// Preferências por pessoa no navegador (avisos vistos, "Como funciona?" visto). Falha silenciosa sem localStorage.
+export const lerPreferencia = (chave) => {
+    try {
+        return localStorage.getItem(chave);
+    } catch {
+        return null;
+    }
+};
+
+export const salvarPreferencia = (chave, valor) => {
+    try {
+        localStorage.setItem(chave, String(valor));
+    } catch {
+        // Sem armazenamento local: a preferência vale só nesta visita.
+    }
+};
+
+export const chaveAvisosVistos = (idUsuario) => `bt_avisos_visto_${idUsuario}`;
+export const chaveComoFuncionaVisto = (idUsuario) => `bt_como_funciona_visto_${idUsuario}`;
