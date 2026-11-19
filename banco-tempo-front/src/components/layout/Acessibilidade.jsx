@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Accessibility, Check } from 'lucide-react';
+import { Check, PersonStanding } from 'lucide-react';
 import {
     TAMANHOS,
     aplicarAcessibilidade,
@@ -122,10 +122,15 @@ const Acessibilidade = () => {
                 }}
                 aria-expanded={visivel}
                 aria-controls={idPainel}
+                aria-haspopup="dialog"
                 aria-label="Acessibilidade"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-campo text-texto hover:bg-fundo"
+                className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-campo text-texto hover:bg-fundo md:px-2"
             >
-                <Accessibility className="w-5 h-5" aria-hidden="true" />
+                {/* Símbolo de acesso universal (figura de braços abertos num círculo), em traço como os outros ícones. */}
+                <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-current">
+                    <PersonStanding className="h-4 w-4" strokeWidth={2.5} />
+                </span>
+                <span className="hidden md:inline whitespace-nowrap text-sm font-semibold" aria-hidden="true">Acessibilidade</span>
             </button>
 
             {visivel && (

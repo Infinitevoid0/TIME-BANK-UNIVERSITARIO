@@ -67,7 +67,7 @@ const Layout = () => {
             </a>
 
             <header ref={cabecalhoRef} className="cabecalho z-40 border-b border-borda bg-superficie xl:sticky xl:top-0">
-                <div className="mx-auto flex min-h-16 w-full max-w-[90rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1 lg:gap-x-8 lg:px-8">
+                <div className="mx-auto flex min-h-16 w-full max-w-[90rem] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1 lg:gap-x-8 lg:px-8 xl:gap-x-6 xl:px-6">
                     <Link to="/explorar" className="font-titulo text-base font-bold leading-tight text-destaque no-underline max-w-[5.5rem] sm:max-w-none sm:whitespace-nowrap sm:text-xl">
                         Banco de Tempo
                     </Link>
@@ -79,7 +79,7 @@ const Layout = () => {
                                     <NavLink
                                         to={destino.para}
                                         className={({ isActive }) =>
-                                            `flex items-center gap-2 border-b-[3px] px-3 pt-[3px] no-underline whitespace-nowrap ${
+                                            `flex items-center gap-2 border-b-[3px] px-3 pt-[3px] xl:px-2.5 no-underline whitespace-nowrap ${
                                                 isActive
                                                     ? 'border-destaque font-bold text-destaque'
                                                     : 'border-transparent text-texto-suave hover:bg-fundo hover:text-texto'
@@ -95,7 +95,7 @@ const Layout = () => {
                     </nav>
 
                     {/* Três grupos separados: horas, ferramentas (acessibilidade, conversas, avisos) e conta. */}
-                    <div className="ml-auto flex items-center gap-1.5 sm:gap-4">
+                    <div className="ml-auto flex items-center gap-1.5 sm:gap-4 xl:gap-3">
                         <p className="flex items-center gap-2 whitespace-nowrap">
                             <span className="sr-only 2xl:not-sr-only 2xl:whitespace-nowrap text-texto-suave">Suas horas</span>
                             <ChipHoras horas={user.horas} />
