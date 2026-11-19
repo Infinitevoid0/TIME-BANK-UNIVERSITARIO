@@ -61,7 +61,7 @@ Erros de validação de campo trazem também `erros: { "campo": ["mensagem"] }`.
 - **Anexo**: `{ id, nomeArquivo, tipoMime, tamanhoBytes, finalidade, enviadoPorId, rodada, dataUpload }`. `finalidade` 1 = anexo da oferta, 2 = comprovante. Não há caminho de disco.
 - **Evento do histórico**: `{ ocorridoEm, tipo, statusAnterior, statusNovo }`.
 - **Aviso** (`AvisoDto`): `{ id, tipo, atividadeId, tituloAtividade, statusAnterior, statusNovo, ocorridoEm }`. Não identifica quem agiu.
-- **Conversa** (`ConversaDto`): `{ atividadeId, tituloAtividade, status, outraPessoa: Pessoa, ultimaMensagem, ultimaMensagemEm }`. `ultimaMensagem` tem até 80 caracteres; as duas últimas vêm `null` quando ainda não há mensagem.
+- **Conversa** (`ConversaDto`): `{ atividadeId, tituloAtividade, status, outraPessoa: Pessoa, ultimaMensagem, ultimaMensagemEm, ultimaMensagemMinha }`. `ultimaMensagem` tem até 80 caracteres; `ultimaMensagem` e `ultimaMensagemEm` vêm `null` quando ainda não há mensagem. `ultimaMensagemMinha` é `true` quando a última mensagem foi enviada por quem consulta.
 
 Status da atividade (inalterados): 1 Pendente, 2 Aprovada, 3 Recusada, 4 NecessitaCorrecao, 5 PendentePosCorrecao, 6 EmExecucao, 7 AguardandoValidacao, 8 NecessitaRevisao, 9 Validada, 10 Invalida.
 
@@ -144,7 +144,7 @@ Exemplo de resposta:
 Exemplo de `GET /api/chats`:
 
 ```json
-[{ "atividadeId": 41, "tituloAtividade": "Monitoria de algoritmos", "status": 6, "outraPessoa": { "id": 9, "nome": "Bruno M." }, "ultimaMensagem": "Oi, pode ser amanhã às 10h?", "ultimaMensagemEm": "2026-11-19T19:51:03.112Z" }]
+[{ "atividadeId": 41, "tituloAtividade": "Monitoria de algoritmos", "status": 6, "outraPessoa": { "id": 9, "nome": "Bruno M." }, "ultimaMensagem": "Oi, pode ser amanhã às 10h?", "ultimaMensagemEm": "2026-11-19T19:51:03.112Z", "ultimaMensagemMinha": false }]
 ```
 
 ### Cursos e disciplinas

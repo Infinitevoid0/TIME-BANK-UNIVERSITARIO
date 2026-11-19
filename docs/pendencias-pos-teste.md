@@ -22,7 +22,7 @@ Resolvido:
 - 403 do histórico ao abrir a oferta de outra pessoa (19 `acesso_negado` na aula): o front só pede o histórico para participantes e moderação.
 
 Lacunas que continuam:
-- **Mensagens não lidas no chat.** O servidor não registra leitura; a lista de conversas não tem indicador.
+- **Mensagens não lidas no chat.** Há bolinha de mensagem nova, mas o visto fica só no navegador: em outro aparelho a conversa aparece como nova de novo. Para valer em qualquer aparelho, o servidor precisaria registrar a leitura.
 - **"Lido" dos avisos** fica só no navegador (localStorage): em outro aparelho, os avisos aparecem como novos de novo.
 - **Aviso por e-mail** de pedido, conferência e horas registradas: exige envio de e-mail.
 - **Redefinição de senha por e-mail:** mexe em autenticação e exige envio de e-mail.
