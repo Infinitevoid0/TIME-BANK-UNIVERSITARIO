@@ -60,6 +60,8 @@ Erros de validação de campo trazem também `erros: { "campo": ["mensagem"] }`.
   - `feedbackConferencia` (ajuste dos comprovantes ou motivo do cancelamento) só aparece para participantes e moderação.
 - **Anexo**: `{ id, nomeArquivo, tipoMime, tamanhoBytes, finalidade, enviadoPorId, rodada, dataUpload }`. `finalidade` 1 = anexo da oferta, 2 = comprovante. Não há caminho de disco.
 - **Evento do histórico**: `{ ocorridoEm, tipo, statusAnterior, statusNovo }`.
+- **Aviso** (`AvisoDto`): `{ id, tipo, atividadeId, tituloAtividade, statusAnterior, statusNovo, ocorridoEm }`. Não identifica quem agiu.
+- **Conversa** (`ConversaDto`): `{ atividadeId, tituloAtividade, status, outraPessoa: Pessoa, ultimaMensagem, ultimaMensagemEm }`. `ultimaMensagem` tem até 80 caracteres; as duas últimas vêm `null` quando ainda não há mensagem.
 
 Status da atividade (inalterados): 1 Pendente, 2 Aprovada, 3 Recusada, 4 NecessitaCorrecao, 5 PendentePosCorrecao, 6 EmExecucao, 7 AguardandoValidacao, 8 NecessitaRevisao, 9 Validada, 10 Invalida.
 
@@ -73,6 +75,7 @@ Status da atividade (inalterados): 1 Pendente, 2 Aprovada, 3 Recusada, 4 Necessi
 | `POST /api/usuarios/login` | pública | `{ email, senha }` | 200 `{ token, expiraEm, usuario: { id, nome, tipo, horas } }` |
 | `GET /api/usuarios/me` | logado | | `{ id, nome, nomeCompleto, email, tipo, cursoId, horas }` |
 | `GET /api/usuarios/me/horas` | logado | | `{ horas, reservadas, oferecidas, recebidas }` |
+| `GET /api/usuarios/me/avisos` | logado | `?depoisDe={idDoEvento}` opcional | até 30 `Aviso`, do mais novo para o mais antigo (regras abaixo) |
 | `PUT /api/usuarios/me/perfil` | logado | `{ nome, email, cursoId }` | 204 |
 | `GET /api/usuarios` | moderação | | `[{ id, nome, email, tipo, cursoId, curso: {id,nome}|null, horas }]` (`nome` aqui é o completo) |
 | `GET /api/usuarios/{id}` | moderação | | mesmo formato do item da lista |
@@ -120,10 +123,29 @@ Quando as duas partes têm comprovante na rodada atual, a troca passa para 7 soz
 
 | Verbo e rota | Quem | Saída |
 |---|---|---|
+| `GET /api/chats` | logado | lista de `Conversa` das trocas (status 6 em diante) em que a pessoa oferece ou pediu, da conversa mais recente para a mais antiga; a moderação continua abrindo chats pela atividade |
 | `GET /api/chats/{atividadeId}` | participantes e moderação, troca em 6 a 10 | `{ id, atividadeId, mensagens: [{ id, conteudo, dataEnvio, remetenteId, remetente: Pessoa }] }` |
 | `POST /api/chats/{atividadeId}/mensagens` | participantes, troca em 6 a 10 | `{ conteudo }` (até 2000 caracteres) devolve a mensagem |
 
 O chat é criado no pedido. O GET não cria chat.
+
+### Regras de `GET /api/usuarios/me/avisos`
+
+- Só eventos de atividades em que a pessoa do token oferece ou pediu, feitos por outra pessoa (nunca os próprios).
+- Só respostas aceitas (HTTP 2xx) dos tipos `pedido_feito`, `oferta_moderada`, `transicao_aplicada`, `comprovante_enviado`, `horas_registradas` e `horas_devolvidas`.
+- `oferta_moderada` só para quem oferece. Quem pediu só recebe o que aconteceu depois do pedido (status anterior 6 ou mais, ou `comprovante_enviado`).
+
+Exemplo de resposta:
+
+```json
+[{ "id": 812, "tipo": "pedido_feito", "atividadeId": 41, "tituloAtividade": "Monitoria de algoritmos", "statusAnterior": 2, "statusNovo": 6, "ocorridoEm": "2026-11-19T19:50:12.481Z" }]
+```
+
+Exemplo de `GET /api/chats`:
+
+```json
+[{ "atividadeId": 41, "tituloAtividade": "Monitoria de algoritmos", "status": 6, "outraPessoa": { "id": 9, "nome": "Bruno M." }, "ultimaMensagem": "Oi, pode ser amanhã às 10h?", "ultimaMensagemEm": "2026-11-19T19:51:03.112Z" }]
+```
 
 ### Cursos e disciplinas
 

@@ -59,3 +59,19 @@ Cada linha: decisão e motivo.
 - No máximo um evento `limite_excedido` por pessoa ou IP a cada minuto. Motivo: uma enxurrada de requisições recusadas não pode virar uma enxurrada de gravações no banco.
 - Pseudônimos do CSV (U01, U02...) seguem a ordem de cadastro. Motivo: toda conta tem um `usuario_cadastrado` ao nascer, então o pseudônimo de cada pessoa é o mesmo em qualquer exportação; a correspondência não é exportada.
 - O CSV tem só códigos, números e datas, nenhum texto digitado por usuário. Motivo: nada de dado pessoal e nenhum risco de fórmula injetada ao abrir na planilha.
+
+## Melhorias pós-teste (19/11/2026, branch `melhorias-pos-teste`)
+
+- Casos de teste novos numerados de CT-33 a CT-38. Motivo: CT-25 a CT-32 já identificam as verificações do dia da aula (decisão do Theo).
+- Links dos avisos e da lista de conversas vão direto para `/trocas/{id}`. Motivo: `/atividades/{id}` só redireciona para essa rota (decisão do Theo).
+- Avisos: quem pediu não recebe `oferta_moderada` nem eventos anteriores ao pedido. Motivo: textos como "Sua oferta foi aprovada" estariam errados para quem não é dono da oferta.
+- Avisos: o id do último aviso visto fica no localStorage (`bt_avisos_visto_<id>`), e abrir o painel marca todos como vistos. Motivo: o servidor não guarda "lido" e o briefing proíbe mudar entidades.
+- Avisos: o front pede a lista inteira (até 30) a cada atualização, sem usar `depoisDe`. Motivo: a lista é pequena e o painel sempre reflete o servidor; `depoisDe` continua disponível na API.
+- "Como funciona?": abre sozinho na primeira entrada de cada pessoa e grava `bt_como_funciona_visto_<id>` no localStorage ao fechar ou concluir. Motivo: o servidor não tem esse dado e o briefing pede o localStorage; em outro navegador o guia abre de novo, uma vez.
+- "Como funciona?": o guia mora num contexto dentro do layout (`ComoFuncionaProvider`). Motivo: ele abre do menu, do diálogo de pedido, de Minhas horas e do erro de horas.
+- Link "Como funciona?" dentro do diálogo de pedido fecha o pedido antes de abrir o guia. Motivo: dois diálogos empilhados disputariam o Esc e o foco.
+- O `Modal` existente passou a prender o Tab dentro do diálogo. Motivo: o briefing pede foco preso, e o componente só guardava e devolvia o foco.
+- O `ChatPage` virou `PainelConversa`, com a mesma lógica (carregar, enviar, polling de 5 s), usado na página Conversas. Os comprovantes passaram da tela de chat para a tela da troca, sem mudar o `UploadComprovantes`. `/chat/{id}` redireciona para a troca. Motivo: o briefing pede a conversa fora da troca e os comprovantes na troca.
+- A outra pessoa na lista de conversas usa `Identidade.NomeExibicao`, o mesmo cálculo de `Mapeamento.Pessoa`. Motivo: a consulta projeta só o nome, sem carregar a entidade inteira com e-mail e horas.
+- Abaixo de 640 px, o nome "Banco de Tempo" quebra em duas linhas e a seta do menu da conta some. Motivo: com o sino e o ícone de conversas, o cabeçalho passava 52 px da tela de 360 px.
+- No diálogo de pedido, saiu a frase "Se a troca for cancelada, as horas voltam para você". Motivo: a linha fixa nova e o passo 4 do guia dizem o mesmo.

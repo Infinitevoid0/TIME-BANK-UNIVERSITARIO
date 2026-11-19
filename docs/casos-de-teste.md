@@ -51,3 +51,38 @@ Execução de 04/11/2026, antes da tag `aula-pronta` (commit `082ddf3`), na pilh
 | CT-30 | Exportação de eventos | CSV com 188 eventos, atores como U01, U02... e nenhuma ocorrência de `@` ou `ufsc` | `GET /api/admin/eventos.csv` |
 | CT-31 | Limite de escrita na pilha real | 10 criações aceitas, a 11ª e a 12ª com 429, `Retry-After: 60` e `LIMITE_EXCEDIDO`; um único evento `limite_excedido` | `curl` na pilha |
 | CT-32 | Roteiro de fumaça da API reexecutado com o limite de requisições ligado (commit `388c795`, checagem do `/uploads` corrigida) | 54 de 54 pelo nginx do compose | `python3 scripts/verificacao/fumaca_api.py http://127.0.0.1:8090 ...` |
+
+## Melhorias pós-teste (branch `melhorias-pos-teste`)
+
+Execução de 19/11/2026, 16:52 (UTC-3), commit `b7af543`:
+
+- Comando: `dotnet test BancoTempo.Tests/BancoTempo.Tests.csproj`.
+- Ambiente: o mesmo das execuções anteriores, com PostgreSQL 16 real via Testcontainers.
+- Resultado: **31 de 31 aprovados**. São os 24 anteriores mais 7 execuções novas (o CT-38 roda para as duas rotas). Nenhum foi ignorado.
+
+| ID | Requisito ou risco | Entrada | Resultado esperado | Resultado obtido | Evidência (teste) |
+|---|---|---|---|---|---|
+| CT-33 | Aviso de pedido para quem oferece; LGPD | Outra pessoa pede a oferta de A; A chama `/me/avisos` | Aviso `pedido_feito` da atividade, sem identificação do ator | Aviso `pedido_feito` (2 para 6), sem campo de ator, nome ou e-mail | `AvisosEConversasTests.CT33_quem_oferece_recebe_aviso_de_pedido_feito_sem_identificacao_de_quem_pediu` |
+| CT-34 | Aviso não repete a própria ação | A pede a oferta de B; A chama `/me/avisos` | O pedido feito pela própria A não aparece | Não aparece; a aprovação da oferta de B também não | `AvisosEConversasTests.CT34_quem_pediu_nao_recebe_aviso_do_proprio_pedido` |
+| CT-35 | OWASP API1 | C, que não participa, chama `/me/avisos` | Nenhum aviso da atividade de A e B | Nenhum | `AvisosEConversasTests.CT35_quem_nao_participa_nao_recebe_avisos_da_troca_alheia` |
+| CT-36 | OWASP API1 | A e B em troca; C chama `GET /api/chats` | A conversa de A e B não aparece para C | Não aparece | `AvisosEConversasTests.CT36_quem_nao_participa_nao_ve_a_conversa_alheia_na_lista` |
+| CT-37 | OWASP API3; LGPD | A chama `GET /api/chats` | Conversa com título, outra pessoa por nome de exibição, sem e-mail nem horas | Título, status 6, "Bruno C.", última mensagem cortada em 80 caracteres, sem `@`, "horas" ou "saldo" | `AvisosEConversasTests.CT37_lista_de_conversas_traz_titulo_e_outra_pessoa_por_nome_de_exibicao_sem_email_nem_horas` |
+| CT-38 | OWASP API2 | `/me/avisos` e `/api/chats` sem token | 401 | 401 `NAO_AUTENTICADO` nas duas | `AvisosEConversasTests.CT38_avisos_e_conversas_sem_token_respondem_401` |
+
+### Verificação no navegador
+
+- Pilha `docker-compose.teste.yml` subida num projeto separado (`bancotempo-verificacao`, porta 8091), sem tocar na pilha e nos dados da aula.
+- Roteiro com duas contas (A oferece, B pede) e a moderação, no Edge sem janela (Playwright).
+- Resultado: 46 de 46 checagens em 360 px e 43 de 43 em 1280 px, depois de corrigir o cabeçalho em 360 px.
+- O que foi conferido:
+  - senha visível nos três campos, pelo mouse (valor e foco mantidos) e pelo teclado;
+  - guia na primeira entrada e não na segunda, reaberto pelo menu, fechando com Esc e Entendi;
+  - link do diálogo de pedido abrindo o passo 4;
+  - nenhuma chamada a `/historico` ao abrir a oferta de outra pessoa;
+  - sino de A com "Alguém pediu sua oferta" sem recarregar, sem nome nem e-mail de quem pediu;
+  - comprovantes e "Abrir conversa" na troca;
+  - conversa pela página nova e pelo atalho;
+  - texto do erro de horas insuficientes com o link;
+  - explicação em Minhas horas;
+  - console sem erros.
+- Eventos com HTTP 400 ou mais no banco da verificação: só 2 `horas_insuficientes`, provocados pelo roteiro, e nenhum `acesso_negado`.
