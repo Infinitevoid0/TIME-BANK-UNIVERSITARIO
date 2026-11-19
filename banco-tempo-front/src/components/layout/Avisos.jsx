@@ -5,12 +5,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { getAvisos } from '../../services/usuarioService';
 import { mensagemDeErro } from '../../services/mensagens';
 import { formatarTempoRelativo } from '../../services/formatos';
-import { chaveAvisosVistos, lerPreferencia, salvarPreferencia } from '../../services/sessao';
+import { chaveAvisosLimpos, chaveAvisosVistos, lerPreferencia, salvarPreferencia } from '../../services/sessao';
 import { infoDoAviso } from '../ui/avisoInfo';
 
 const INTERVALO_MS = 60000;
 
-// Sino de avisos no cabeçalho. O servidor não guarda "lido": o id do último aviso visto fica no navegador.
+// Sino de avisos no cabeçalho. O servidor não guarda "lido" nem "limpo": o id do último aviso visto
+// e o do último aviso limpo ficam no navegador. Limpar esconde os avisos atuais; os novos voltam a aparecer.
 const Avisos = () => {
     const { user } = useAuth();
     const [avisos, setAvisos] = useState([]);
@@ -19,6 +20,8 @@ const Avisos = () => {
     const [aberto, setAberto] = useState(false);
     const [caminhoAberto, setCaminhoAberto] = useState(null);
     const [vistoAte, setVistoAte] = useState(() => Number(lerPreferencia(chaveAvisosVistos(user?.id))) || 0);
+    const [limpoAte, setLimpoAte] = useState(() => Number(lerPreferencia(chaveAvisosLimpos(user?.id))) || 0);
+    const [limpoAnterior, setLimpoAnterior] = useState(null);
     const location = useLocation();
     const botaoRef = useRef(null);
     const caixaRef = useRef(null);
@@ -93,12 +96,32 @@ const Avisos = () => {
         }
         setCaminhoAberto(location.pathname);
         setAberto(true);
+        setLimpoAnterior(null);
         marcarComoVistos(avisos);
         const lista = await carregar();
         if (lista) marcarComoVistos(lista);
     };
 
-    const naoVistos = avisos.filter((a) => a.id > vistoAte).length;
+    const visiveis = avisos.filter((a) => a.id > limpoAte);
+    const naoVistos = visiveis.filter((a) => a.id > vistoAte).length;
+
+    const mudarLimpoAte = (valor) => {
+        setLimpoAte(valor);
+        salvarPreferencia(chaveAvisosLimpos(user?.id), valor);
+    };
+
+    const limparTodos = () => {
+        if (!visiveis.length) return;
+        setLimpoAnterior(limpoAte);
+        mudarLimpoAte(Math.max(...visiveis.map((a) => a.id)));
+        marcarComoVistos(visiveis);
+    };
+
+    const desfazerLimpeza = () => {
+        if (limpoAnterior === null) return;
+        mudarLimpoAte(limpoAnterior);
+        setLimpoAnterior(null);
+    };
     const rotulo = naoVistos > 0 ? `Avisos, ${naoVistos} ${naoVistos > 1 ? 'novos' : 'novo'}` : 'Avisos';
 
     return (
@@ -130,9 +153,23 @@ const Avisos = () => {
                     aria-label="Avisos"
                     className="menu-entrada fixed inset-x-4 top-[calc(var(--altura-cabecalho,4rem)+0.25rem)] z-50 rounded-painel border border-borda bg-superficie shadow-elevada sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80"
                 >
-                    <p className="border-b border-borda px-4 py-3 font-titulo text-lg font-semibold">Avisos</p>
+                    <div className="flex items-center justify-between gap-2 border-b border-borda py-1.5 pl-4 pr-2">
+                        <p className="font-titulo text-lg font-semibold">Avisos</p>
+                        {visiveis.length > 0 && (
+                            <button type="button" onClick={limparTodos} className="botao-terciario px-2">
+                                Limpar todos
+                            </button>
+                        )}
+                    </div>
                     <div className="max-h-[min(24rem,60vh)] overflow-y-auto">
-                        {carregando && avisos.length === 0 ? (
+                        {limpoAnterior !== null && visiveis.length === 0 ? (
+                            <div role="status" className="px-4 py-6 text-center">
+                                <p className="text-texto-suave">Avisos limpos. Os novos aparecem aqui.</p>
+                                <button type="button" onClick={desfazerLimpeza} className="botao-terciario mt-1">
+                                    Desfazer
+                                </button>
+                            </div>
+                        ) : carregando && avisos.length === 0 ? (
                             <p role="status" className="px-4 py-6 text-texto-suave">Carregando avisos...</p>
                         ) : erro && avisos.length === 0 ? (
                             <div role="alert" className="px-4 py-5">
@@ -141,11 +178,11 @@ const Avisos = () => {
                                     Tentar de novo
                                 </button>
                             </div>
-                        ) : avisos.length === 0 ? (
+                        ) : visiveis.length === 0 ? (
                             <p className="px-4 py-6 text-center text-texto-suave">Nenhum aviso por enquanto</p>
                         ) : (
                             <ul className="divide-y divide-borda">
-                                {avisos.map((aviso) => {
+                                {visiveis.map((aviso) => {
                                     const { texto, Icone } = infoDoAviso(aviso);
                                     return (
                                         <li key={aviso.id}>
