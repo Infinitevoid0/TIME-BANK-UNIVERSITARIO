@@ -54,7 +54,8 @@ public record DisciplinaDto(int Id, string Nome, int CursoId, ReferenciaDto? Cur
 public record AvisoDto(int Id, string Tipo, int AtividadeId, string TituloAtividade, int? StatusAnterior, int? StatusNovo, DateTime OcorridoEm);
 
 // Conversa de uma troca para a lista de conversas. A outra pessoa aparece só pelo nome de exibição.
-public record ConversaDto(int AtividadeId, string TituloAtividade, int Status, PessoaDto OutraPessoa, string? UltimaMensagem, DateTime? UltimaMensagemEm);
+// UltimaMensagemMinha diz se a última mensagem foi enviada por quem consulta (o front não acende "nova" para ela).
+public record ConversaDto(int AtividadeId, string TituloAtividade, int Status, PessoaDto OutraPessoa, string? UltimaMensagem, DateTime? UltimaMensagemEm, bool UltimaMensagemMinha);
 
 public record EventoHistoricoDto(DateTime OcorridoEm, string Tipo, int? StatusAnterior, int? StatusNovo);
 

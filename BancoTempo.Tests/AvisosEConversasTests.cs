@@ -4,7 +4,7 @@ using BancoTempo.Tests.Infra;
 
 namespace BancoTempo.Tests;
 
-// CT-33 a CT-38: rotas de leitura criadas depois do teste com a turma (avisos e lista de conversas).
+// CT-33 a CT-39: rotas de leitura criadas depois do teste com a turma (avisos e lista de conversas).
 [Collection(ColecaoApi.Nome)]
 public sealed class AvisosEConversasTests
 {
@@ -99,6 +99,23 @@ public sealed class AvisosEConversasTests
         Assert.DoesNotContain("@", texto);
         Assert.DoesNotContain("horas", texto, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("saldo", texto, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CT39_lista_de_conversas_indica_se_a_ultima_mensagem_e_de_quem_consulta()
+    {
+        var troca = await _cenario.CriarTrocaEmExecucaoAsync(horas: 1);
+        await (await troca.Oferece.Cliente.PostAsync(
+            $"/api/chats/{troca.AtividadeId}/mensagens",
+            new StringContent(JsonSerializer.Serialize(new { conteudo = "Podemos combinar amanhã?" }), System.Text.Encoding.UTF8, "application/json")))
+            .DeveSerSucesso();
+
+        var deQuemEnviou = Assert.Single(await ListaAsync(troca.Oferece, "/api/chats"), c => DaAtividade(c, troca.AtividadeId));
+        var daOutraPessoa = Assert.Single(await ListaAsync(troca.Pede, "/api/chats"), c => DaAtividade(c, troca.AtividadeId));
+
+        Assert.True(deQuemEnviou.GetProperty("ultimaMensagemMinha").GetBoolean());
+        Assert.False(daOutraPessoa.GetProperty("ultimaMensagemMinha").GetBoolean());
+        Assert.Equal("Podemos combinar amanhã?", daOutraPessoa.GetProperty("ultimaMensagem").GetString());
     }
 
     [Theory]

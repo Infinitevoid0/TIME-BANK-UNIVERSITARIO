@@ -45,7 +45,7 @@ namespace BancoTempo.Api.Controllers
                     Ultima = _context.Mensagens
                         .Where(m => m.ChatPrivado!.AtividadeId == a.Id)
                         .OrderByDescending(m => m.DataEnvio).ThenByDescending(m => m.Id)
-                        .Select(m => new { m.Conteudo, m.DataEnvio })
+                        .Select(m => new { m.Conteudo, m.DataEnvio, m.RemetenteId })
                         .FirstOrDefault(),
                 })
                 .ToListAsync();
@@ -56,7 +56,8 @@ namespace BancoTempo.Api.Controllers
                     l.Id, l.Titulo, (int)l.Status,
                     new PessoaDto(l.OutraId, Identidade.NomeExibicao(l.OutraNome)),
                     l.Ultima is null ? null : (l.Ultima.Conteudo.Length > 80 ? l.Ultima.Conteudo[..80] : l.Ultima.Conteudo),
-                    l.Ultima?.DataEnvio)));
+                    l.Ultima?.DataEnvio,
+                    l.Ultima != null && l.Ultima.RemetenteId == eu)));
         }
 
         [HttpGet("{atividadeId:int}")]
