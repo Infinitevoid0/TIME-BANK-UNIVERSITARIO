@@ -297,6 +297,8 @@
   [data-texto="maior"] .nav-topo { display: none; }
   [data-texto="grande"] .nav-inferior,
   [data-texto="maior"] .nav-inferior { display: block; }
+  [data-texto="grande"] .dock-conversas,
+  [data-texto="maior"] .dock-conversas { display: none; }
   [data-texto="grande"] .conteudo-principal,
   [data-texto="maior"] .conteudo-principal { padding-bottom: 8rem; }
   [data-texto="grande"] .popup-conversas,

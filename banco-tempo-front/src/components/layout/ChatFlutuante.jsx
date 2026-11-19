@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Maximize2, MessagesSquare, X } from 'lucide-react';
+import { ArrowLeft, ChevronUp, Maximize2, MessagesSquare, X } from 'lucide-react';
 import { getConversas } from '../../services/chatService';
 import { mensagemDeErro } from '../../services/mensagens';
 import { formatarTempoRelativo } from '../../services/formatos';
@@ -190,5 +190,27 @@ export const BotaoConversas = () => {
         >
             <MessagesSquare className="w-5 h-5" aria-hidden="true" />
         </button>
+    );
+};
+
+// Aba fixa no canto inferior direito (estilo LinkedIn) que abre o mesmo popup.
+// Só a partir de 1280 px, quando não há barra inferior de navegação; some enquanto o popup está aberto.
+export const AbaConversas = () => {
+    const { abrirConversa, aberto } = useChatFlutuante();
+    // Escondida (não desmontada) enquanto o popup está aberto, para o foco voltar a ela ao fechar.
+    return (
+        <div className={`dock-conversas fixed bottom-0 right-6 z-30 hidden w-72 ${aberto ? '' : 'xl:block'}`}>
+            <button
+                type="button"
+                onClick={() => abrirConversa()}
+                aria-expanded={aberto}
+                aria-haspopup="dialog"
+                className="flex w-full min-h-12 items-center gap-3 rounded-t-painel border border-b-0 border-borda bg-superficie px-4 text-left font-bold text-texto shadow-elevada hover:bg-fundo"
+            >
+                <MessagesSquare className="w-5 h-5 text-destaque" aria-hidden="true" />
+                <span className="flex-1">Conversas</span>
+                <ChevronUp className="w-5 h-5 text-texto-suave" aria-hidden="true" />
+            </button>
+        </div>
     );
 };

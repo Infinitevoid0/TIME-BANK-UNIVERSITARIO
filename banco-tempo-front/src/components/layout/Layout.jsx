@@ -6,7 +6,7 @@ import ChipHoras from '../ui/ChipHoras';
 import MenuConta from './MenuConta';
 import Avisos from './Avisos';
 import Acessibilidade from './Acessibilidade';
-import { BotaoConversas, ChatFlutuanteProvider } from './ChatFlutuante';
+import { AbaConversas, BotaoConversas, ChatFlutuanteProvider } from './ChatFlutuante';
 import { ComoFuncionaProvider } from '../features/ComoFunciona';
 
 // Os quatro destinos principais: no topo a partir de 1280 px (com texto, não cabem antes), na barra inferior abaixo disso.
@@ -141,6 +141,7 @@ const Layout = () => {
                     ))}
                 </ul>
             </nav>
+            <AbaConversas />
         </div>
         </ChatFlutuanteProvider>
         </ComoFuncionaProvider>
