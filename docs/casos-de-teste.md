@@ -86,3 +86,26 @@ Execução de 19/11/2026, 16:52 (UTC-3), commit `b7af543`:
   - explicação em Minhas horas;
   - console sem erros.
 - Eventos com HTTP 400 ou mais no banco da verificação: só 2 `horas_insuficientes`, provocados pelo roteiro, e nenhum `acesso_negado`.
+
+### Verificação dos ajustes de cabeçalho, acessibilidade e popup de conversas (19/11/2026)
+
+- Mesmo roteiro de navegador, ampliado com:
+  - popup de conversas aberto pelo cabeçalho e pela troca, fechando com Esc;
+  - popup sem cobrir a barra inferior;
+  - tela cheia continuando a funcionar;
+  - texto Maior (fonte de 20 px) e alto contraste ligados, salvos depois de recarregar e desfeitos por "Voltar ao padrão".
+- Resultado:
+
+| Largura | Checagens |
+|---|---|
+| 1920 px | 54 de 54 |
+| 1280 px | 54 de 54 |
+| 1024 px | 55 de 55 |
+| 768 px | 55 de 55 |
+| 360 px | 56 de 56 |
+
+- Capturas em 1920, 1280, 1024, 768 e 360 px, com contraste padrão e alto, sem rolagem horizontal na página nem no cabeçalho e sem erro de JavaScript.
+- Antes dos ajustes finais, o mesmo roteiro pegou três falhas reais, todas corrigidas:
+  - texto Maior estourando 207 px em 1280 px;
+  - popup encostando 3 px na barra inferior em 360 px;
+  - texto Maior estourando 11 px em 360 px.

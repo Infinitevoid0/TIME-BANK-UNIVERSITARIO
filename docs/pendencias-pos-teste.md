@@ -27,3 +27,5 @@ Lacunas que continuam:
 - **Aviso por e-mail** de pedido, conferência e horas registradas: exige envio de e-mail.
 - **Redefinição de senha por e-mail:** mexe em autenticação e exige envio de e-mail.
 - **Imagens do "Como funciona?"** são provisórias (`src/assets/como-funciona/*-placeholder.svg`).
+
+- **Modo escuro:** os tokens existem no DESIGN.md, mas só o claro e o alto contraste claro foram implementados e verificados.

@@ -75,3 +75,16 @@ Cada linha: decisão e motivo.
 - A outra pessoa na lista de conversas usa `Identidade.NomeExibicao`, o mesmo cálculo de `Mapeamento.Pessoa`. Motivo: a consulta projeta só o nome, sem carregar a entidade inteira com e-mail e horas.
 - Abaixo de 640 px, o nome "Banco de Tempo" quebra em duas linhas e a seta do menu da conta some. Motivo: com o sino e o ícone de conversas, o cabeçalho passava 52 px da tela de 360 px.
 - No diálogo de pedido, saiu a frase "Se a troca for cancelada, as horas voltam para você". Motivo: a linha fixa nova e o passo 4 do guia dizem o mesmo.
+
+## Ajustes pedidos pelo Theo depois da revisão das melhorias (19/11/2026)
+
+- Cabeçalho em três grupos separados por divisórias: horas, ferramentas (acessibilidade, conversas, avisos) e conta. Motivo: os itens estavam colados e o rótulo "Suas horas" quebrava em duas linhas.
+- A barra superior com os quatro destinos só aparece a partir de 1280 px; abaixo disso fica a barra inferior. Motivo: entre 768 e 1279 px os rótulos não cabiam junto do resto (passavam até 168 px da tela).
+- O rótulo "Suas horas" aparece ao lado do chip só a partir de 1536 px. Abaixo disso o chip continua visível e o texto fica para leitor de tela. Motivo: em 1280 px o rótulo quebrava em duas linhas.
+- Botão de acessibilidade no cabeçalho com tamanho do texto (Padrão 100%, Grande 112,5%, Maior 125%) e alto contraste. A escolha fica salva no aparelho (`bt_acessibilidade`) e é aplicada antes da primeira tela, inclusive no login. Sem escolha salva, o contraste segue o `prefers-contrast` do sistema. Motivo: pedido do Theo; o alto contraste usa a coluna "Alto contraste claro" do DESIGN.md.
+- No celular, abaixo de 640 px, os controles de acessibilidade ficam dentro do menu da conta. Motivo: em 360 px não cabem três ícones, o chip de horas e a conta com alvos de 44 px.
+- Com texto Grande ou Maior, a navegação fica na barra inferior em qualquer largura. Motivo: os pontos de quebra do CSS não acompanham o tamanho do texto e a barra superior estourava 207 px em 1280 px.
+- O cabeçalho pode quebrar em duas linhas, e as alturas reais do cabeçalho e da barra inferior viram variáveis CSS (`--altura-cabecalho`, `--altura-nav`). Motivo: o popup e os painéis se posicionam por elas sem cobrir a navegação com qualquer tamanho de texto.
+- Modo escuro continua fora. Motivo: não foi pedido e não dá para verificar os quatro modos agora (R-34 do antislop); só o alto contraste claro foi conferido.
+- Conversas em popup: o ícone do cabeçalho e o botão "Abrir conversa" da troca abrem um painel com a lista e a conversa, sem sair da página. Ele não é modal, fecha com X, Esc ou troca de página, e tem botão para abrir em tela cheia. Motivo: pedido do Theo. Não é um botão flutuante, que o briefing vetava por conflitar com a barra inferior; abaixo de 1280 px o painel ocupa só a área entre o cabeçalho e a barra inferior.
+- A página `/conversas` continua existindo e é a opção "tela cheia" do popup e do menu da conta.
