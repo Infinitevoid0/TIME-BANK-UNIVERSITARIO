@@ -36,11 +36,18 @@ const AtividadeDetalhesPage = () => {
 
     useEffect(() => {
         let ativo = true;
-        Promise.all([
-            getAtividade(id),
-            getAnexos(id).catch(() => []),
-            getHistorico(id).catch(() => []),
-        ])
+        // A atividade vem primeiro: o histórico só é pedido por quem participa ou modera,
+        // senão a API responde 403 e registra acesso_negado à toa (19 vezes na aula de 04/11).
+        getAtividade(id)
+            .then(async (atividade) => {
+                const podeVerHistorico =
+                    isModerador || user?.id === atividade.ofertanteId || user?.id === atividade.compradorId;
+                const [anexos, historico] = await Promise.all([
+                    getAnexos(id).catch(() => []),
+                    podeVerHistorico ? getHistorico(id).catch(() => []) : Promise.resolve([]),
+                ]);
+                return [atividade, anexos, historico];
+            })
             .then(([atividade, anexos, historico]) => {
                 if (!ativo) return;
                 setEstado({
@@ -64,7 +71,7 @@ const AtividadeDetalhesPage = () => {
         return () => {
             ativo = false;
         };
-    }, [id, tentativa]);
+    }, [id, tentativa, user?.id, isModerador]);
 
     // Trecho da última mensagem para o atalho "Abrir conversa" (a conversa em si fica na página Conversas).
     const atividadeCarregada = estado.atividade;
