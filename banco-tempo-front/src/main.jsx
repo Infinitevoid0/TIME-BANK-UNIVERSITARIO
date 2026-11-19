@@ -5,6 +5,10 @@ import App from './App.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import './index.css';
+import { aplicarAcessibilidade, lerAcessibilidade } from './services/acessibilidade';
+
+// Tamanho do texto e contraste salvos neste aparelho valem desde a primeira tela, inclusive no login.
+aplicarAcessibilidade(lerAcessibilidade());
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

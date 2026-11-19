@@ -273,3 +273,32 @@
 .menu-entrada {
   animation: surgir-de-cima var(--duracao) var(--curva);
 }
+
+/* Alto contraste: bordas de 2px, links sempre sublinhados, sem sombra (DESIGN.md, Regras de uso). */
+[data-contraste="alto"] a { text-decoration: underline; text-underline-offset: 3px; }
+[data-contraste="alto"] .painel,
+[data-contraste="alto"] .campo,
+[data-contraste="alto"] .botao-primario,
+[data-contraste="alto"] .botao-secundario { border-width: 2px; }
+[data-contraste="alto"] .botao-secundario:hover:not(:disabled),
+[data-contraste="alto"] .botao-terciario { text-decoration: underline; text-underline-offset: 3px; }
+[data-contraste="alto"] .chip-status { border: 2px solid currentColor; }
+[data-contraste="alto"] .chip-aguardando { border-color: #6B4F00; }
+[data-contraste="alto"] .chip-aceito { border-color: #002A5C; }
+[data-contraste="alto"] .chip-concluido { border-color: #005A26; }
+[data-contraste="alto"] .chip-cancelado { border-color: #26303D; }
+[data-contraste="alto"] .chip-horas { border: 2px solid #000000; }
+[data-contraste="alto"] :focus-visible { outline-width: 3px; }
+
+/* Texto ampliado: a barra superior com rótulos não cabe nas larguras de desktop (os pontos de quebra não
+   acompanham o tamanho do texto), então a navegação fica na barra inferior em qualquer largura. */
+@media (min-width: 80rem) {
+  [data-texto="grande"] .nav-topo,
+  [data-texto="maior"] .nav-topo { display: none; }
+  [data-texto="grande"] .nav-inferior,
+  [data-texto="maior"] .nav-inferior { display: block; }
+  [data-texto="grande"] .conteudo-principal,
+  [data-texto="maior"] .conteudo-principal { padding-bottom: 8rem; }
+  [data-texto="grande"] .popup-conversas,
+  [data-texto="maior"] .popup-conversas { max-height: calc(100vh - var(--altura-cabecalho, 4rem) - var(--altura-nav, 4.5rem) - 2rem); }
+}

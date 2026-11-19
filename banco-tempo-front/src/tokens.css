@@ -1,4 +1,4 @@
-/* Tokens do modo claro (DESIGN.md). Só o modo claro existe nesta versão. */
+/* Tokens do modo claro (DESIGN.md) e, logo abaixo, do alto contraste claro. */
 :root {
   --fundo: #F3F6FA;
   --superficie: #FFFFFF;
@@ -35,6 +35,39 @@
   --duracao: 180ms;
   --duracao-dialogo: 220ms;
   --curva: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Alto contraste claro (DESIGN.md, coluna "Alto contraste claro"): AAA, sem cores sutis. */
+:root[data-contraste="alto"] {
+  --fundo: #FFFFFF;
+  --superficie: #FFFFFF;
+  --texto: #000000;
+  --texto-suave: #26303D;
+  --borda: #000000;
+  --borda-campo: #000000;
+  --destaque: #002A5C;
+  --destaque-fundo: #002A5C;
+  --sobre-destaque: #FFFFFF;
+  --destaque-hover: #000000;
+  --destaque-tenue: #EEF2F7;
+  --hora: #FEE300;
+  --sobre-hora: #000000;
+  --foco: #000000;
+  --neutro: #EEF2F7;
+
+  /* Chips de status perdem o fundo colorido: superfície, texto principal e borda de 2px na cor do status. */
+  --status-aguardando-texto: #000000;
+  --status-aguardando-fundo: #FFFFFF;
+  --status-aceito-texto: #000000;
+  --status-aceito-fundo: #FFFFFF;
+  --status-concluido-texto: #000000;
+  --status-concluido-fundo: #FFFFFF;
+  --status-cancelado-texto: #000000;
+  --status-cancelado-fundo: #FFFFFF;
+  --erro-texto: #A00000;
+  --erro-fundo: #FFFFFF;
+
+  --sombra-elevada: none;
 }
 
 @theme inline {

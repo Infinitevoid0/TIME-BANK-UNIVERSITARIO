@@ -128,7 +128,7 @@ const Avisos = () => {
                     id={idPainel}
                     role="region"
                     aria-label="Avisos"
-                    className="menu-entrada fixed inset-x-4 top-16 z-50 rounded-painel border border-borda bg-superficie shadow-elevada sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80"
+                    className="menu-entrada fixed inset-x-4 top-[calc(var(--altura-cabecalho,4rem)+0.25rem)] z-50 rounded-painel border border-borda bg-superficie shadow-elevada sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80"
                 >
                     <p className="border-b border-borda px-4 py-3 font-titulo text-lg font-semibold">Avisos</p>
                     <div className="max-h-[min(24rem,60vh)] overflow-y-auto">

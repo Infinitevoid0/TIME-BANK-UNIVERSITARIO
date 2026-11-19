@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, Calendar, Download, MessagesSquare, Paperclip, Pen
 import { getChat } from '../../services/chatService';
 import { formatarTempoRelativo } from '../../services/formatos';
 import UploadComprovantes from '../chat/UploadComprovantes';
+import { useChatFlutuante } from '../../hooks/useChatFlutuante';
 import { baixarAnexo, getAnexos, getAtividade, getHistorico } from '../../services/atividadeService';
 import { formatarData } from '../../services/formatos';
 import { mensagemDeErro } from '../../services/mensagens';
@@ -22,6 +23,7 @@ const AtividadeDetalhesPage = () => {
     const navigate = useNavigate();
     const toast = useToast();
     const { user, isModerador } = useAuth();
+    const { abrirConversa } = useChatFlutuante();
 
     const [estado, setEstado] = useState({
         carregando: true,
@@ -237,10 +239,10 @@ const AtividadeDetalhesPage = () => {
                                 }, ${formatarTempoRelativo(ultimaMensagem.dataEnvio)}`
                               : 'Nenhuma mensagem ainda. Combinem horário e local pela conversa.'}
                     </p>
-                    <Link to={`/conversas?atividade=${atividade.id}`} className="botao-primario">
+                    <button type="button" onClick={() => abrirConversa(atividade.id)} className="botao-primario">
                         <MessagesSquare className="w-4 h-4" aria-hidden="true" />
                         Abrir conversa
-                    </Link>
+                    </button>
                 </section>
             )}
 

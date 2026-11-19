@@ -11,7 +11,8 @@ import ChipStatus from '../ui/ChipStatus';
 import { Carregando, ErroCarregar } from '../ui/Estados';
 
 // Conversa de uma troca: mesma lógica do antigo ChatPage (carregar, enviar, polling de 5 s), agora usada na página Conversas.
-const PainelConversa = ({ atividadeId, aoEnviar }) => {
+// compacto: versão do popup, que ocupa a altura toda do painel e rola só as mensagens.
+const PainelConversa = ({ atividadeId, aoEnviar, compacto = false }) => {
     const { user } = useAuth();
     const toast = useToast();
     const fimMensagensRef = useRef(null);
@@ -93,25 +94,27 @@ const PainelConversa = ({ atividadeId, aoEnviar }) => {
         user?.id === atividade.ofertanteId || user?.id === atividade.compradorId;
 
     return (
-        <section aria-labelledby="titulo-conversa" className="painel flex flex-col overflow-hidden">
-            <div className="border-b border-borda px-5 py-3.5 space-y-2">
+        <section aria-labelledby="titulo-conversa" className={compacto ? 'flex h-full min-h-0 flex-col' : 'painel flex flex-col overflow-hidden'}>
+            <div className={`border-b border-borda space-y-2 ${compacto ? 'px-4 py-3' : 'px-5 py-3.5'}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h2 id="titulo-conversa" className="text-xl break-words">{atividade.titulo}</h2>
+                    <h2 id="titulo-conversa" className={`break-words ${compacto ? 'text-lg' : 'text-xl'}`}>{atividade.titulo}</h2>
                     <ChipStatus status={atividade.status} />
                 </div>
                 <p className="text-texto-suave">
                     Conversa entre <strong className="text-texto">{atividade.ofertante?.nome || 'Quem oferece'}</strong> e{' '}
                     <strong className="text-texto">{atividade.comprador?.nome || 'Quem pediu'}</strong>
                 </p>
-                <p className="text-sm text-texto-suave">
-                    Combinem horário, local ou link da chamada sem informar dados pessoais sensíveis.
-                </p>
+                {!compacto && (
+                    <p className="text-sm text-texto-suave">
+                        Combinem horário, local ou link da chamada sem informar dados pessoais sensíveis.
+                    </p>
+                )}
                 <Link to={`/trocas/${atividade.id}`} className="inline-block text-sm">
                     Ver a troca e os comprovantes
                 </Link>
             </div>
 
-            <div className="flex max-h-[26rem] min-h-[16rem] flex-col gap-3 overflow-y-auto p-5">
+            <div className={`flex flex-col gap-3 overflow-y-auto ${compacto ? 'min-h-0 flex-1 p-4' : 'max-h-[26rem] min-h-[16rem] p-5'}`}>
                 {!chat.mensagens || chat.mensagens.length === 0 ? (
                     <div className="my-auto py-8 text-center text-texto-suave">
                         <MessageSquare className="mx-auto mb-2 h-8 w-8" aria-hidden="true" />
@@ -142,11 +145,11 @@ const PainelConversa = ({ atividadeId, aoEnviar }) => {
             </div>
 
             {souParticipante && (
-                <form onSubmit={handleEnviarMensagem} className="border-t border-borda bg-fundo p-4 space-y-2">
+                <form onSubmit={handleEnviarMensagem} className={`border-t border-borda bg-fundo space-y-2 ${compacto ? 'p-3' : 'p-4'}`}>
                     <label htmlFor="chat-mensagem" className="rotulo">
                         Escrever mensagem
                     </label>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className={`flex gap-2 ${compacto ? 'flex-row' : 'flex-col sm:flex-row'}`}>
                         <input
                             id="chat-mensagem"
                             type="text"
@@ -162,7 +165,9 @@ const PainelConversa = ({ atividadeId, aoEnviar }) => {
                             className="botao-primario shrink-0"
                         >
                             <Send className="w-4 h-4" aria-hidden="true" />
-                            {enviando ? 'Enviando...' : 'Enviar mensagem'}
+                            {compacto ? (
+                                <span className="sr-only">{enviando ? 'Enviando...' : 'Enviar mensagem'}</span>
+                            ) : enviando ? 'Enviando...' : 'Enviar mensagem'}
                         </button>
                     </div>
                 </form>

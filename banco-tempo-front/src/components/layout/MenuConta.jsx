@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, CircleHelp, LogOut, MessagesSquare, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useComoFunciona } from '../../hooks/useComoFunciona';
+import { ControlesAcessibilidade } from './Acessibilidade';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 
@@ -55,7 +56,7 @@ const MenuConta = () => {
                 onClick={alternar}
                 aria-expanded={visivel}
                 aria-controls={idPainel}
-                className="inline-flex items-center gap-2 min-h-11 rounded-campo px-2 hover:bg-fundo"
+                className="inline-flex items-center gap-2 min-h-11 rounded-campo px-1 sm:px-2 hover:bg-fundo"
             >
                 <Avatar nome={user?.nomeCompleto || user?.nome} />
                 <span className="sr-only sm:not-sr-only font-bold">Conta</span>
@@ -114,6 +115,13 @@ const MenuConta = () => {
                                 </li>
                             </>
                         )}
+                        {/* No celular o botão de acessibilidade não cabe no cabeçalho: os controles ficam aqui. */}
+                        <li className="mt-1 border-t border-borda px-4 pb-2 pt-3 sm:hidden">
+                            <p className="font-bold">Acessibilidade</p>
+                            <div className="mt-2">
+                                <ControlesAcessibilidade />
+                            </div>
+                        </li>
                         <li className="mt-1 border-t border-borda pt-1">
                             <button type="button" onClick={logout} className={itemClasse}>
                                 <LogOut className="w-5 h-5 text-texto-suave" aria-hidden="true" />
