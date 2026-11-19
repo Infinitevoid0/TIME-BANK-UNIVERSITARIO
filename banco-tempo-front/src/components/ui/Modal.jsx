@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
-// Diálogo acessível: fecha com Esc, guarda e devolve o foco só ao abrir ou fechar.
+// Diálogo acessível: fecha com Esc, prende o Tab dentro do diálogo e devolve o foco ao fechar.
 const Modal = ({ isOpen, onClose, title, children }) => {
     const idTitulo = useId();
     const painelRef = useRef(null);
@@ -17,6 +17,23 @@ const Modal = ({ isOpen, onClose, title, children }) => {
         const focoAnterior = document.activeElement;
         const handleEscape = (e) => {
             if (e.key === 'Escape') onCloseRef.current?.();
+            if (e.key === 'Tab' && painelRef.current) {
+                const focaveis = Array.from(
+                    painelRef.current.querySelectorAll(
+                        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )
+                );
+                if (focaveis.length === 0) return;
+                const primeiro = focaveis[0];
+                const ultimo = focaveis[focaveis.length - 1];
+                if (e.shiftKey && (document.activeElement === primeiro || document.activeElement === painelRef.current)) {
+                    e.preventDefault();
+                    ultimo.focus();
+                } else if (!e.shiftKey && document.activeElement === ultimo) {
+                    e.preventDefault();
+                    primeiro.focus();
+                }
+            }
         };
 
         document.addEventListener('keydown', handleEscape);

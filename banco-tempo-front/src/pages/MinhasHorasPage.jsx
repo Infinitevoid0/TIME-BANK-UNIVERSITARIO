@@ -10,6 +10,7 @@ import { useToast } from '../hooks/useToast';
 import ChipHoras from '../components/ui/ChipHoras';
 import Modal from '../components/ui/Modal';
 import LinhaOferta from '../components/features/LinhaOferta';
+import ExplicacaoHoras from '../components/features/ExplicacaoHoras';
 import { Carregando, ErroCarregar, Vazio } from '../components/ui/Estados';
 
 const MinhasHorasPage = () => {
@@ -104,6 +105,8 @@ const MinhasHorasPage = () => {
                     </div>
                     <ChipHoras horas={resumo.horas} className="text-base px-4 py-1.5" />
                 </div>
+
+                <ExplicacaoHoras />
 
                 {resumo.horas === 0 && (
                     <p className="rounded-campo border border-borda bg-fundo p-3.5">

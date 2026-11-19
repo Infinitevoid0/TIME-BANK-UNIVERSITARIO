@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import ChipHoras from '../ui/ChipHoras';
 import MenuConta from './MenuConta';
 import Avisos from './Avisos';
+import { ComoFuncionaProvider } from '../features/ComoFunciona';
 
 // Os quatro destinos principais, iguais no topo (desktop) e na barra inferior (celular).
 const DESTINOS = [
@@ -26,6 +27,7 @@ const Layout = () => {
     if (!user) return <Navigate to="/login" replace />;
 
     return (
+        <ComoFuncionaProvider>
         <div className="min-h-screen flex flex-col">
             <a
                 href="#conteudo"
@@ -109,6 +111,7 @@ const Layout = () => {
                 </ul>
             </nav>
         </div>
+        </ComoFuncionaProvider>
     );
 };
 

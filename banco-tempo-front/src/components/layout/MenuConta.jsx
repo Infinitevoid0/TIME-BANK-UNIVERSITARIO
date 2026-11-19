@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, LogOut, MessagesSquare, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { ChevronDown, CircleHelp, LogOut, MessagesSquare, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { useComoFunciona } from '../../hooks/useComoFunciona';
 import { useAuth } from '../../hooks/useAuth';
 import Avatar from '../ui/Avatar';
 
@@ -9,6 +10,7 @@ const PAPEL = { 1: 'Aluno', 2: 'Moderação', 3: 'Administração' };
 // Menu de divulgação (botão + lista de links): abre com Enter ou clique, fecha com Esc, clique fora ou troca de página.
 const MenuConta = () => {
     const { user, logout, isModerador } = useAuth();
+    const { abrir: abrirComoFunciona } = useComoFunciona();
     const [aberto, setAberto] = useState(false);
     const [caminhoAberto, setCaminhoAberto] = useState(null);
     const location = useLocation();
@@ -82,6 +84,19 @@ const MenuConta = () => {
                                 <MessagesSquare className="w-5 h-5 text-texto-suave" aria-hidden="true" />
                                 Conversas
                             </Link>
+                        </li>
+                        <li>
+                            <button
+                                type="button"
+                                className={itemClasse}
+                                onClick={() => {
+                                    setAberto(false);
+                                    abrirComoFunciona(0);
+                                }}
+                            >
+                                <CircleHelp className="w-5 h-5 text-texto-suave" aria-hidden="true" />
+                                Como funciona?
+                            </button>
                         </li>
                         {isModerador && (
                             <>
